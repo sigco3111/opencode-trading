@@ -1,0 +1,8 @@
+name: analyze
+trigger_examples:
+  - company_analysis
+  - security_review
+outputs:
+  directory: trading/reports/analyze
+  format: json
+  filename_pattern: "*.analyze.json"

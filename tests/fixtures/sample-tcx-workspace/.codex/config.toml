@@ -1,0 +1,287 @@
+sandbox_mode = "workspace-write"
+approval_policy = { granular = { sandbox_approval = true, rules = true, mcp_elicitations = true, request_permissions = false, skill_approval = false } }
+approvals_reviewer = "user"
+allow_login_shell = false
+default_permissions = "tradingcodex"
+model_instructions_file = "prompts/base_instructions/head-manager.md"
+
+[agents]
+max_threads = {{SUBAGENT_COUNT}}
+max_depth = 1
+
+[[skills.config]]
+path = "{{PROJECT_DIR}}/.agents/skills/strategy-creator/SKILL.md"
+enabled = true
+
+[[skills.config]]
+path = "{{PROJECT_DIR}}/.agents/skills/tradingcodex-operator/SKILL.md"
+enabled = true
+
+# BEGIN TradingCodex strategy skills
+# END TradingCodex strategy skills
+
+[permissions.tradingcodex]
+description = "TradingCodex workspace profile with secret and broker credential paths denied."
+extends = ":workspace"
+
+[permissions.tradingcodex.filesystem.":workspace_roots"]
+"**/*.env" = "deny"
+".tradingcodex/secrets/**" = "deny"
+".tradingcodex/secrets.md" = "deny"
+"**/*broker*credential*" = "deny"
+
+[permissions.tradingcodex.network]
+enabled = false
+
+[permissions.tradingcodex-fundamental]
+description = "TradingCodex fundamental analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-fundamental.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/reports/technical/**" = "deny"
+"trading/reports/news/**" = "deny"
+"trading/reports/macro/**" = "deny"
+"trading/reports/instrument/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-technical]
+description = "TradingCodex technical analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-technical.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/reports/fundamental/**" = "deny"
+"trading/reports/news/**" = "deny"
+"trading/reports/macro/**" = "deny"
+"trading/reports/instrument/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-news]
+description = "TradingCodex news analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-news.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/reports/fundamental/**" = "deny"
+"trading/reports/technical/**" = "deny"
+"trading/reports/macro/**" = "deny"
+"trading/reports/instrument/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-macro]
+description = "TradingCodex macro analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-macro.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/reports/fundamental/**" = "deny"
+"trading/reports/technical/**" = "deny"
+"trading/reports/news/**" = "deny"
+"trading/reports/instrument/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-instrument]
+description = "TradingCodex instrument analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-instrument.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/reports/fundamental/**" = "deny"
+"trading/reports/technical/**" = "deny"
+"trading/reports/news/**" = "deny"
+"trading/reports/macro/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-valuation]
+description = "TradingCodex valuation analyst profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-valuation.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-portfolio]
+description = "TradingCodex portfolio manager profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-portfolio.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/approvals/**" = "deny"
+"trading/orders/approved/**" = "deny"
+"trading/orders/executed/**" = "deny"
+"trading/audit/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[permissions.tradingcodex-risk]
+description = "TradingCodex risk manager profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-risk.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/execution-operator/**" = "deny"
+"trading/orders/executed/**" = "deny"
+".tradingcodex/secrets.md" = "deny"
+
+[permissions.tradingcodex-execution]
+description = "TradingCodex execution operator profile."
+extends = "tradingcodex"
+
+[permissions.tradingcodex-execution.filesystem.":workspace_roots"]
+".tradingcodex/strategies/**" = "deny"
+".tradingcodex/subagents/skills/fundamental-analyst/**" = "deny"
+".tradingcodex/subagents/skills/technical-analyst/**" = "deny"
+".tradingcodex/subagents/skills/news-analyst/**" = "deny"
+".tradingcodex/subagents/skills/macro-analyst/**" = "deny"
+".tradingcodex/subagents/skills/instrument-analyst/**" = "deny"
+".tradingcodex/subagents/skills/valuation-analyst/**" = "deny"
+".tradingcodex/subagents/skills/portfolio-manager/**" = "deny"
+".tradingcodex/subagents/skills/risk-manager/**" = "deny"
+"trading/research/**" = "deny"
+"trading/reports/fundamental/**" = "deny"
+"trading/reports/technical/**" = "deny"
+"trading/reports/news/**" = "deny"
+"trading/reports/macro/**" = "deny"
+"trading/reports/instrument/**" = "deny"
+"trading/reports/valuation/**" = "deny"
+"trading/reports/portfolio/**" = "deny"
+"trading/reports/risk/**" = "deny"
+"trading/reports/policy/**" = "deny"
+".tradingcodex/policies/**" = "deny"
+
+[mcp_servers.tradingcodex]
+command = "uvx"
+args = ["--refresh", "--python", "3.14", "--from", "{{TRADINGCODEX_MCP_PACKAGE_SPEC}}", "python", "-m", "tradingcodex_cli", "mcp", "stdio"]
+enabled = true
+env = { TRADINGCODEX_MCP_AUTOSTART_SERVICE = "1", TRADINGCODEX_SERVICE_ADDR = "127.0.0.1:48267", TRADINGCODEX_WORKSPACE_ROOT = "{{PROJECT_DIR}}" }
+enabled_tools = [
+  "get_tradingcodex_status",
+  "simulate_policy",
+  "get_order_status",
+  "list_broker_connections",
+  "get_broker_connection_status",
+  "list_reconciliation_runs",
+  "get_order_ticket",
+  "list_order_tickets",
+  "record_broker_mapping_review",
+  "get_positions",
+  "get_portfolio_snapshot",
+  "list_workflow_artifacts",
+  "create_research_artifact",
+  "get_research_artifact",
+  "list_research_artifacts",
+  "search_research_artifacts",
+  "append_research_artifact_version",
+  "export_research_artifact_md",
+  "record_source_snapshot",
+  "list_external_mcp_connections",
+  "register_external_mcp_connection",
+  "check_external_mcp_connection",
+  "discover_external_mcp_connection",
+  "review_external_mcp_tool",
+  "record_audit_event"
+]
+default_tools_approval_mode = "prompt"
+startup_timeout_sec = 20
+tool_timeout_sec = 30
+
+[shell_environment_policy]
+inherit = "core"
+set = {}
+exclude = [
+  "*API_KEY*",
+  "*SECRET*",
+  "*TOKEN*",
+  "BROKER_*",
+  "BROKER_API_KEY",
+  "BROKER_API_SECRET",
+  "TRADING_API_KEY",
+  "TRADING_API_SECRET"
+]

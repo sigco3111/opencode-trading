@@ -1,0 +1,8 @@
+name: order-review
+trigger_examples:
+  - draft_order
+  - sizing_decision
+outputs:
+  directory: trading/orders/draft
+  format: json
+  filename_pattern: "*.order_ticket.json"
