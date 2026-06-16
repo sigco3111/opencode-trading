@@ -14,7 +14,9 @@ verifying the package loads correctly during dev without `pip install -e`.
 """
 from __future__ import annotations
 
+import sys
+
 from opencode_trading.cli import main
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

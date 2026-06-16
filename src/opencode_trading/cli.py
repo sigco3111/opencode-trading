@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from opencode_trading import __version__
@@ -97,34 +98,55 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _cmd_convert(args: argparse.Namespace) -> int:
-    """Handler for `opencode-trading convert`.
-
-    v0.1.0: stub — prints plan and exits 0.
-    v0.2.0: implement actual conversion (TOML → JSON, hooks, commands, MCP).
-    """
+    """Handler for `opencode-trading convert`."""
     workspace: Path = args.workspace
     if not workspace.exists():
         print(f"error: workspace does not exist: {workspace}", file=sys.stderr)
-        sys.exit(2)
+        return 2
     if not workspace.is_dir():
         print(f"error: workspace is not a directory: {workspace}", file=sys.stderr)
-        sys.exit(2)
+        return 2
 
     out_dir = args.out or (workspace / ".opencode")
+
+    from opencode_trading import convert_workspace
+    from opencode_trading.exceptions import MissingWorkspaceError
+
+    try:
+        ws = convert_workspace(workspace, to=args.to)
+    except MissingWorkspaceError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     print(f"opencode-trading {__version__} — convert")
     print(f"  workspace: {workspace}")
     print(f"  target:    {args.to}")
     print(f"  out dir:   {out_dir}")
+    print(f"  agents:    {len(ws.agents)}")
+    print(f"  skills:    {len(ws.skills)}")
+    print(f"  hooks:     {len(ws.hooks)}")
+    print(f"  mcp:       {len(ws.mcp_servers)}")
+
     if args.dry_run:
-        print("  mode:      dry-run (no files written)")
+        print()
+        print("dry-run: no files written.")
+        return 0
+
+    try:
+        written = ws.write(out_dir, overwrite=True)
+    except FileExistsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     print()
-    print("v0.1.0 stub: no conversion performed yet.")
-    print("Implementation plan: see README.md '다른 PC에서 작업' section.")
+    print(f"wrote {len(written)} files to {out_dir}/")
     return 0
 
 
-_HANDLERS: dict[str, callable] = {
+_HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "convert": _cmd_convert,
 }
 
