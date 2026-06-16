@@ -10,7 +10,7 @@
 
 ## 왜 이게 필요한가? / Why?
 
-TradingCodex 0.2.1은 **Codex 전용 하니스**입니다 (`.codex/agents/*.toml`, `.codex/prompts/*`, `.codex/hooks/*`에 깊이 종속). OpenCode + oh-my-openagent 환경에서 그 역할 토폴로지(1+9 specialists)와 MCP 실행 경계를 그대로 쓰려면 변환 계층이 필요합니다.
+TradingCodex 0.2.0은 **Codex 전용 하니스**입니다 (`.codex/agents/*.toml`, `.codex/prompts/*`, `.codex/hooks/*`에 깊이 종속). OpenCode + oh-my-openagent 환경에서 그 역할 토폴로지(1+9 specialists)와 MCP 실행 경계를 그대로 쓰려면 변환 계층이 필요합니다.
 
 | 갭 / Gap | TradingCodex (Codex) | OpenCode | 해결 / Solution |
 |---|---|---|---|
@@ -28,11 +28,11 @@ TradingCodex is a **Codex-only harness** (deeply tied to `.codex/agents/*.toml`,
 ## 설치 / Installation
 
 ```bash
-# v0.1.0 이후 (PyPI 미배포 — GitHub 직접 설치)
-pip install git+https://github.com/sigco3111/opencode-trading.git@v0.1.0
+# v0.2.0 이후 (PyPI 미배포 — GitHub 직접 설치)
+pip install git+https://github.com/sigco3111/opencode-trading.git@v0.2.0
 
 # 또는 uv (PEP 668 호환)
-uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.1.0
+uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.2.0
 ```
 
 **의존성 / Dependencies**: zero-deps (TradingCodex 본체는 별도 설치)
@@ -70,7 +70,7 @@ opencode
 
 ---
 
-## 변환 범위 (v0.1.0) / Conversion Scope
+## 변환 범위 (v0.2.0) / Conversion Scope
 
 | TradingCodex 자산 / Asset | OpenCode 매핑 / Mapping | 상태 / Status |
 |---|---|---|
@@ -102,7 +102,7 @@ opencode
 
 ---
 
-## 다른 PC에서 작업 (Phase 0 v0.1.0) / Working from another PC
+## 다른 PC에서 작업 (Phase 0 v0.2.0) / Working from another PC
 
 이 저장소는 **다른 PC에서 풀 부트스트랩**할 수 있도록 설계되었습니다. 빈 워크스페이스에서 시작:
 
@@ -129,6 +129,8 @@ python3 -c "from opencode_trading.converters.codex_to_opencode import convert_wo
 pytest -v
 ```
 
+To verify the conversion without a real TradingCodex installation, use the included sample fixture: `python -m opencode_trading convert --workspace tests/fixtures/sample-tcx-workspace --out /tmp/oc-out`
+
 ### 작업 순서 제안 / Suggested implementation order
 
 1. **`models.py`** — `OpenCodeAgent`, `OpenCodeSkill`, `OpenCodeHook` 도메인 타입
@@ -148,7 +150,7 @@ pytest -v
 | 버전 / Version | 목표 / Goal | 상태 / Status |
 |---|---|---|
 | **v0.1.0** | Phase 0: README/스켈레톤/문서/설계 (다른 PC 작업용) | ✅ 진행 중 / In progress |
-| **v0.2.0** | 변환기 5종 (agent/hook/command/mcp/workflow) + 30+ 테스트 | 📋 예정 / Planned |
+| **v0.2.0** | 변환기 5종 (agent/hook/command/mcp/workflow) + 30+ 테스트 | ✅ Released |
 | **v0.3.0** | `tcx-opencode attach` CLI — OpenCode용 워크스페이스 생성기 | 📋 예정 / Planned |
 | **v1.0.0** | TradingCodex 업스트림 머지 가능 형태로 안정화 | 📋 예정 / Planned |
 
@@ -199,7 +201,7 @@ opencode-trading/
 
 - **runtime**: zero (TradingCodex 본체는 `monarchjuno/tradingcodex` 별도 설치)
 - **dev**: `pytest>=8`, `ruff`, `mypy`
-- **TradingCodex 본체**: `pip install git+https://github.com/monarchjuno/tradingcodex.git@v0.2.1` (또는 PyPI `tradingcodex`)
+- **TradingCodex 본체**: `pip install git+https://github.com/monarchjuno/tradingcodex.git@v0.2.0` (또는 PyPI `tradingcodex`)
 
 ---
 
@@ -221,7 +223,7 @@ Contributions welcome. For new converters:
 
 ## 감사의 말 / Credits
 
-- **[monarchjuno/tradingcodex](https://github.com/monarchjuno/tradingcodex)** v0.2.1 — 본체 (Apache-2.0)
+- **[monarchjuno/tradingcodex](https://github.com/monarchjuno/tradingcodex)** v0.2.0 — 본체 (Apache-2.0)
 - **[oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)** — OpenCode 에이전트 스쿼드 시스템
 - **시그니처 시리즈 / Sigco signature series**: `md-doctor`, `cron-doctor`, `kakao-summary`와 동일 패턴
 
