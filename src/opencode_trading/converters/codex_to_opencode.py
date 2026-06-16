@@ -1,10 +1,9 @@
-"""Main orchestrator: convert a TradingCodex workspace to OpenCode.
+"""Main orchestrator: convert a TradingCodex v0.2.0 workspace to OpenCode.
 
-Implementation note (for other-PC worker)
-----------------------------------------
-This is the **only** function most users will call. It runs all 4
-sub-converters in order, bundles results into an OpenCodeWorkspace, and
-returns it. The caller (CLI) handles writing to disk.
+This is the only function most users will call. It runs all 5
+sub-converters in order, bundles results into an :class:`OpenCodeWorkspace`,
+and returns it. The caller (CLI) handles writing to disk via
+:meth:`OpenCodeWorkspace.write`.
 
 Public entry point
 ------------------
@@ -13,32 +12,32 @@ Public entry point
     >>> workspace.to_opencode_json_blocks()
     {'agent': {...}, 'mcp': {...}, 'hooks': [...]}
 
-TradingCodex workspace structure (v0.2.1)
+TradingCodex workspace structure (v0.2.0)
 ------------------------------------------
-A `tcx attach`-generated workspace contains:
-- ``.codex/agents/*.toml``        — 1+9 role definitions
-- ``.codex/prompts/*``            — slash commands (e.g. ``$orchestrate-workflow``)
-- ``.codex/hooks/*.py``           — UserPromptSubmit / etc.
+A ``tcx attach``-generated workspace contains:
+- ``.codex/agents/*.toml``            — 9 specialist role definitions
+- ``.codex/hooks.json``               — single hook event dispatch
+- ``.codex/prompts/base_instructions/head-manager.md`` — head-manager prompt
+- ``.tradingcodex/mainagent/head-manager.yaml``       — mainagent metadata
+- ``.tradingcodex/mainagent/subagent-registry.yaml``  — role→skill mapping
 - ``.tradingcodex/workflows/*.yaml`` — workflow definitions
-- ``.tradingcodex/policies/*.yaml``  — policy exports
-- ``.agents/skills/*/SKILL.md``   — strategy + repo skills
-- ``tcx``                         — generated wrapper script
-
-The conversion reads all of the above and emits OpenCode equivalents
-into a single OpenCodeWorkspace bundle.
+- ``.agents/skills/*/SKILL.md``       — orchestrator skills
+- ``.tradingcodex/subagents/skills/<role>/<skill>/SKILL.md`` — role skills
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from opencode_trading.exceptions import MissingWorkspaceError
-from opencode_trading.models import OpenCodeWorkspace
-
-# Stubs (v0.1.0) — full implementation lands in v0.2.0
-from opencode_trading.converters.commands import convert_orchestrate_workflow
-from opencode_trading.converters.hooks import convert_user_prompt_submit
+from opencode_trading.converters.agents import convert_agents
+from opencode_trading.converters.commands import (
+    collect_orchestrator_skills,
+    convert_orchestrate_workflow,
+)
+from opencode_trading.converters.hooks import convert_hooks
 from opencode_trading.converters.mcp import register_tradingcodex_mcp
 from opencode_trading.converters.workflows import convert_workflow_files
+from opencode_trading.exceptions import MissingWorkspaceError
+from opencode_trading.models import OpenCodeSkill, OpenCodeWorkspace
 
 
 def convert_workspace(
@@ -52,9 +51,9 @@ def convert_workspace(
     ----------
     workspace : Path | str
         Path to the TradingCodex-generated workspace (the one created by
-        ``tcx attach <dir>``). Must contain ``.codex/`` and ``.tradingcodex/``.
+        ``tcx attach <dir>``). Must contain ``.codex/``.
     to : str
-        Target format. Only ``"opencode"`` is supported in v0.1.0.
+        Target format. Only ``"opencode"`` is supported.
 
     Returns
     -------
@@ -65,9 +64,11 @@ def convert_workspace(
     ------
     MissingWorkspaceError
         If ``workspace`` doesn't exist or isn't a TradingCodex workspace.
+    ValueError
+        If ``to`` is not ``"opencode"``.
     """
     if to != "opencode":
-        raise ValueError(f"unsupported target format: {to!r} (only 'opencode' in v0.1.0)")
+        raise ValueError(f"unsupported target format: {to!r} (only 'opencode' supported)")
 
     workspace_path = Path(workspace).expanduser().resolve()
     if not workspace_path.exists() or not workspace_path.is_dir():
@@ -79,17 +80,58 @@ def convert_workspace(
             f"not a TradingCodex workspace (no .codex/ in {workspace_path})"
         )
 
-    # v0.1.0: return an empty workspace; v0.2.0 wires the 4 sub-converters
-    # and discovers .codex/agents/*.toml, .codex/prompts/*, .codex/hooks/*,
-    # .tradingcodex/workflows/*.yaml.
-    #
-    # Plan for v0.2.0 (in order):
-    # 1. Discover .codex/agents/*.toml → OpenCodeAgent tuple
-    # 2. Discover .agents/skills/*/SKILL.md → OpenCodeSkill tuple
-    # 3. hooks = (convert_user_prompt_submit(workspace_path),)
-    # 4. mcp_servers = (register_tradingcodex_mcp(),)
-    # 5. workflow skills from convert_workflow_files(workspace_path)
-    _ = (convert_orchestrate_workflow, convert_user_prompt_submit,
-         register_tradingcodex_mcp, convert_workflow_files)  # silence unused
+    # Run all 5 sub-converters
+    agents = convert_agents(workspace_path)
+    hooks = convert_hooks(workspace_path)
+    mcp_servers = (register_tradingcodex_mcp(),)
+    head_manager_skill = convert_orchestrate_workflow(workspace_path)
+    orchestrator_skills = collect_orchestrator_skills(workspace_path)
+    role_skills = _collect_role_skills(workspace_path)
+    workflow_skills = convert_workflow_files(workspace_path)
 
-    return OpenCodeWorkspace()
+    # Bundle: head-manager prompt + orchestrator skills + role skills + workflow skills
+    all_skills: tuple[OpenCodeSkill, ...] = (
+        (head_manager_skill,)
+        + orchestrator_skills
+        + role_skills
+        + workflow_skills
+    )
+
+    return OpenCodeWorkspace(
+        agents=agents,
+        skills=all_skills,
+        hooks=hooks,
+        mcp_servers=mcp_servers,
+    )
+
+
+def _collect_role_skills(workspace: Path) -> tuple[OpenCodeSkill, ...]:
+    """Discover role-owned skills under ``.tradingcodex/subagents/skills/``.
+
+    Each role gets one skill per <skill>/SKILL.md file. We synthesize a
+    name like ``<role>-<skill>`` (e.g. ``risk-manager-review-risk``) to
+    avoid collisions with orchestrator skill names.
+    """
+    from opencode_trading._frontmatter import parse_frontmatter
+
+    root = workspace / ".tradingcodex" / "subagents" / "skills"
+    if not root.exists():
+        return ()
+
+    skills: list[OpenCodeSkill] = []
+    for skill_md in sorted(root.rglob("SKILL.md")):
+        # Path: <root>/<role>/<skill-name>/SKILL.md
+        parts = skill_md.relative_to(root).parts
+        if len(parts) < 3:
+            continue
+        role, skill_name = parts[0], parts[1]
+        text = skill_md.read_text(encoding="utf-8")
+        fm = parse_frontmatter(text)
+        skills.append(
+            OpenCodeSkill(
+                name=fm.name or f"{role}-{skill_name}",
+                description=fm.description,
+                body=fm.body,
+            )
+        )
+    return tuple(skills)
