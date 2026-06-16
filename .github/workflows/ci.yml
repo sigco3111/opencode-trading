@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          mypy src || true   # 0.1.0 — strict mode is v0.3.0+
+          mypy src --strict
 
       - name: Run tests
         run: |
@@ -48,3 +48,13 @@ jobs:
         run: |
           python -m opencode_trading --version
           python -m opencode_trading --help
+
+      - name: Convert sample TradingCodex workspace
+        run: |
+          python -m opencode_trading convert \
+            --workspace tests/fixtures/sample-tcx-workspace \
+            --out /tmp/oc-ci-out
+          test -f /tmp/oc-ci-out/agents.json
+          test -f /tmp/oc-ci-out/mcp.json
+          test -f /tmp/oc-ci-out/hooks.json
+          test -d /tmp/oc-ci-out/skills
