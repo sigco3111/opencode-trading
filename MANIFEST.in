@@ -1,0 +1,7 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include pyproject.toml
+
+# Bundled TradingCodex templates (used by opencode-trading attach CLI)
+recursive-include src/opencode_trading/_bundled *.toml *.yaml *.json *.md
