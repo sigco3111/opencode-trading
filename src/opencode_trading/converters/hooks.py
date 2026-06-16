@@ -1,43 +1,107 @@
-"""Convert Codex ``UserPromptSubmit`` hooks to OpenCode hook objects.
+"""Convert Codex ``.codex/hooks.json`` to OpenCode hook objects.
 
-Implementation note (for other-PC worker)
-----------------------------------------
-Codex hooks are Python files in ``.codex/hooks/`` that get executed by
-Codex's runtime. They use a specific function signature
-(``def hook(payload: dict) -> dict:``) and modify the payload in place.
+TradingCodex v0.2.0 declares all hooks in a single JSON file at
+``.codex/hooks.json`` with this structure:
 
-OpenCode hooks are different — they're declared in ``opencode.json`` as
-a list of ``{event, command, env, blocking}`` objects, and the ``command``
-is a shell command (argv), not a Python function.
+    {
+      "hooks": {
+        "SessionStart": [{"hooks": [{"type": "command", "command": "...",
+                                     "timeout": 10, "statusMessage": "..."}]}],
+        "PreToolUse": [{"matcher": "Bash|mcp__.*", "hooks": [...]}],
+        "UserPromptSubmit": [...],
+        "SubagentStart": [...],
+        "SubagentStop": [...],
+        "Stop": [...],
+        "PostToolUse": [...],
+        "PermissionRequest": [...]
+      }
+    }
 
-Conversion strategy (v0.2.0)
-----------------------------
-For each ``.codex/hooks/<name>.py``:
-1. Parse the file's AST to extract the function docstring (description)
-2. Wrap the Python invocation in a shell command:
-   ``python3 <workspace>/.codex/hooks/<name>.py``
-3. Preserve the env vars Codex passed (PAYLOAD, ROLE, etc.)
-4. Mark as ``blocking=True`` (Codex hooks are sync by default)
-
-Edge case: a Codex hook may import other modules from the workspace.
-For v0.2.0, set the working directory to the workspace root in env.
+We map each Codex event+hook entry to an :class:`OpenCodeHook`. The
+``command`` string is split via :func:`shlex.split` into an argv tuple.
+Matchers, timeouts, and statusMessages are preserved in ``env``.
 """
 from __future__ import annotations
 
+import json
+import shlex
 from pathlib import Path
 
+from opencode_trading.exceptions import ConversionError
 from opencode_trading.models import OpenCodeHook
 
+# Codex event name → OpenCode event name
+_EVENT_MAP: dict[str, str] = {
+    "SessionStart": "session_start",
+    "PreToolUse": "pre_tool_use",
+    "PermissionRequest": "permission_request",
+    "PostToolUse": "post_tool_use",
+    "UserPromptSubmit": "user_prompt_submit",
+    "SubagentStart": "subagent_start",
+    "SubagentStop": "subagent_stop",
+    "Stop": "session_end",
+}
 
-def convert_user_prompt_submit(workspace: Path) -> tuple[OpenCodeHook, ...]:
-    """Discover and convert Codex ``UserPromptSubmit`` hooks.
+
+def convert_hooks(workspace: Path) -> tuple[OpenCodeHook, ...]:
+    """Read ``.codex/hooks.json`` and convert each hook to OpenCodeHook.
 
     Returns
     -------
     tuple[OpenCodeHook, ...]
-        One OpenCodeHook per discovered ``.codex/hooks/*-submit.py`` file.
-        Empty tuple in v0.1.0 (stub).
+        One OpenCodeHook per inner hook in the JSON. Empty tuple if
+        the file does not exist.
+
+    Raises
+    ------
+    ConversionError
+        If ``.codex/hooks.json`` exists but is not valid JSON.
     """
-    # v0.1.0: stub — v0.2.0 implements AST parsing + shell wrapping
-    _ = workspace
-    return ()
+    hooks_path = workspace / ".codex" / "hooks.json"
+    if not hooks_path.exists():
+        return ()
+
+    try:
+        with hooks_path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except json.JSONDecodeError as exc:
+        raise ConversionError(f"invalid JSON in {hooks_path}: {exc}") from exc
+
+    result: list[OpenCodeHook] = []
+    for codex_event, entries in data.get("hooks", {}).items():
+        opencode_event = _EVENT_MAP.get(codex_event)
+        if opencode_event is None:
+            continue
+        for entry in entries:
+            matcher = entry.get("matcher", "")
+            for inner in entry.get("hooks", []):
+                if inner.get("type") != "command":
+                    continue
+                cmd = inner.get("command", "")
+                env: dict[str, str] = {}
+                if matcher:
+                    env["OPENCODE_HOOK_MATCHER"] = matcher
+                if "timeout" in inner:
+                    env["OPENCODE_HOOK_TIMEOUT"] = str(inner["timeout"])
+                if "statusMessage" in inner:
+                    env["OPENCODE_HOOK_STATUS_MESSAGE"] = inner["statusMessage"]
+                result.append(
+                    OpenCodeHook(
+                        event=opencode_event,  # type: ignore[arg-type]
+                        command=_split_command(cmd),
+                        env=env,
+                        blocking=True,
+                    )
+                )
+    return tuple(result)
+
+
+def _split_command(command: str) -> tuple[str, ...]:
+    """Split a shell command string into argv tuple using shlex.
+
+    Falls back to a single-element tuple on parse error.
+    """
+    try:
+        return tuple(shlex.split(command))
+    except ValueError:
+        return (command,)
