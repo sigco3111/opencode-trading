@@ -1,45 +1,65 @@
 """Register the TradingCodex MCP server in an OpenCode workspace.
 
-Implementation note (for other-PC worker)
-----------------------------------------
-TradingCodex ships an MCP server (the Django service) that exposes typed
-tools like ``create_research_artifact``, ``create_order_ticket``, etc.
-OpenCode's MCP client can connect to it via stdio or HTTP.
+TradingCodex v0.2.0 spawns its MCP server via:
+    uvx --refresh --python 3.14 --from {TRADINGCODEX_MCP_PACKAGE_SPEC} \
+        python -m tradingcodex_cli mcp stdio
 
-The cleanest integration: register the TradingCodex MCP server in
-``opencode.json`` so every OpenCode session has it available.
+with env vars TRADINGCODEX_MCP_AUTOSTART_SERVICE=1, TRADINGCODEX_SERVICE_ADDR=127.0.0.1:48267,
+and TRADINGCODEX_WORKSPACE_ROOT={PROJECT_DIR}.
 
-Command shape (v0.2.0)
-----------------------
-stdio transport (preferred — works offline, no auth dance):
-    command = ["uvx", "--from", "tradingcodex", "tcx", "mcp", "serve"]
-    env = {"TRADINGCODEX_MCP_KEY": "<random-32-char>"}
-
-http transport (for when TradingCodex is already running as a service):
-    transport = "streamable-http"
-    url = "http://127.0.0.1:48267/mcp"
-    env = {"TRADINGCODEX_MCP_KEY": "<same-key-as-the-server>"}
-
-For v0.1.0, we emit the stdio form (always works without pre-existing service).
+We emit these as an OpenCodeMCP(stdio) so OpenCode can spawn the server
+per-session. The {PACKAGE_SPEC} and {PROJECT_DIR} templates are kept
+literal — the user's opencode.json consumer is expected to render them
+(or we render at write time in Workspace.write()).
 """
 from __future__ import annotations
 
 from opencode_trading.models import OpenCodeMCP
 
 
-def register_tradingcodex_mcp() -> OpenCodeMCP:
+def register_tradingcodex_mcp(
+    package_spec: str = "tradingcodex",
+    service_addr: str = "127.0.0.1:48267",
+    workspace_root: str = "{{PROJECT_DIR}}",
+) -> OpenCodeMCP:
     """Build the OpenCodeMCP entry for the TradingCodex MCP server.
+
+    Parameters
+    ----------
+    package_spec : str
+        Value substituted for `{{TRADINGCODEX_MCP_PACKAGE_SPEC}}`. Default
+        "tradingcodex" — the published package. Override with a git+https URL
+        for pinned versions (e.g. "git+https://github.com/monarchjuno/tradingcodex.git@v0.2.0").
+    service_addr : str
+        Value for TRADINGCODEX_SERVICE_ADDR env (default "127.0.0.1:48267").
+    workspace_root : str
+        Value for TRADINGCODEX_WORKSPACE_ROOT env (default "{{PROJECT_DIR}}"
+        — kept as template literal for downstream rendering).
 
     Returns
     -------
     OpenCodeMCP
-        A stdio-transport MCP server config that spawns TradingCodex via uvx.
+        stdio-transport MCP server config matching TradingCodex v0.2.0.
     """
-    # v0.1.0: hard-coded — v0.2.0 will read TRADINGCODEX_MCP_KEY from the
-    # workspace's .tradingcodex/config.yaml if present, else generate one.
     return OpenCodeMCP(
         name="tradingcodex",
         transport="stdio",
-        command=("uvx", "--from", "tradingcodex", "tcx", "mcp", "serve"),
-        env={"TRADINGCODEX_MCP_SAFE_TOOLS": "1"},
+        command=(
+            "uvx",
+            "--refresh",
+            "--python",
+            "3.14",
+            "--from",
+            package_spec,
+            "python",
+            "-m",
+            "tradingcodex_cli",
+            "mcp",
+            "stdio",
+        ),
+        env={
+            "TRADINGCODEX_MCP_AUTOSTART_SERVICE": "1",
+            "TRADINGCODEX_SERVICE_ADDR": service_addr,
+            "TRADINGCODEX_WORKSPACE_ROOT": workspace_root,
+        },
     )
