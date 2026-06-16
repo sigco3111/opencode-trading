@@ -27,7 +27,9 @@ release cycles.
 """
 from __future__ import annotations
 
-__version__ = "0.1.0"
+from typing import Any
+
+__version__ = "0.2.0"
 
 __all__ = [
     "OpenCodeAgent",
@@ -38,16 +40,14 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import to avoid forcing heavy deps on simple usage."""
     if name in ("OpenCodeAgent", "OpenCodeSkill", "OpenCodeHook", "OpenCodeWorkspace"):
-        from .models import (
-            OpenCodeAgent,
-            OpenCodeHook,
-            OpenCodeSkill,
-            OpenCodeWorkspace,
-        )
-        return locals()[name]
+        # Import lazily via importlib to avoid static import-time dependencies
+        import importlib
+
+        mod = importlib.import_module(".models", __name__)
+        return getattr(mod, name)
     if name == "convert_workspace":
         from .converters.codex_to_opencode import convert_workspace
         return convert_workspace
