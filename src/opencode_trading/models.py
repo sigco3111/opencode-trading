@@ -20,8 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
-
+from typing import Any, Literal
 
 # ---------------------------------------------------------------------------
 # Constants (from OpenCode schema observation — verify against latest docs)
@@ -37,6 +36,11 @@ HookEvent = Literal[
     "user_prompt_submit",
     "tool_call",
     "tool_result",
+    "pre_tool_use",
+    "post_tool_use",
+    "permission_request",
+    "subagent_start",
+    "subagent_stop",
 ]
 
 #: OpenCode MCP transport types
@@ -166,7 +170,7 @@ class OpenCodeWorkspace:
     hooks: tuple[OpenCodeHook, ...] = ()
     mcp_servers: tuple[OpenCodeMCP, ...] = ()
 
-    def to_opencode_json_blocks(self) -> dict:
+    def to_opencode_json_blocks(self) -> dict[str, Any]:
         """Return the dict fragments that should be merged into opencode.json."""
         return {
             "agent": {a.name: _agent_to_dict(a) for a in self.agents},
@@ -174,10 +178,71 @@ class OpenCodeWorkspace:
             "hooks": _hooks_to_list(self.hooks),
         }
 
+    def write(self, out_dir: Path, *, overwrite: bool = False) -> list[Path]:
+        """Render the bundle to disk.
 
-def _agent_to_dict(a: OpenCodeAgent) -> dict:
+        Parameters
+        ----------
+        out_dir : Path
+            Directory to write artifacts into. Created if it doesn't exist.
+        overwrite : bool
+            If True, overwrite existing files. If False (default), raise
+            :class:`FileExistsError` if ``out_dir`` already contains files
+            that would be overwritten.
+
+        Returns
+        -------
+        list[Path]
+            Absolute paths of all written files.
+
+        Raises
+        ------
+        FileExistsError
+            If ``out_dir`` exists, has files, and ``overwrite=False``.
+        """
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        written: list[Path] = []
+
+        agents_path = out_dir / "agents.json"
+        if agents_path.exists() and not overwrite:
+            raise FileExistsError(f"refusing to overwrite: {agents_path}")
+        agents_data = {a.name: _agent_to_dict(a) for a in self.agents}
+        agents_path.write_text(_json_dumps(agents_data), encoding="utf-8")
+        written.append(agents_path)
+
+        mcp_path = out_dir / "mcp.json"
+        if mcp_path.exists() and not overwrite:
+            raise FileExistsError(f"refusing to overwrite: {mcp_path}")
+        mcp_data = {m.name: _mcp_to_dict(m) for m in self.mcp_servers}
+        mcp_path.write_text(_json_dumps(mcp_data), encoding="utf-8")
+        written.append(mcp_path)
+
+        hooks_path = out_dir / "hooks.json"
+        if hooks_path.exists() and not overwrite:
+            raise FileExistsError(f"refusing to overwrite: {hooks_path}")
+        hooks_path.write_text(_json_dumps(_hooks_to_list(self.hooks)), encoding="utf-8")
+        written.append(hooks_path)
+
+        skills_dir = out_dir / "skills"
+        skills_dir.mkdir(exist_ok=True)
+        for skill in self.skills:
+            skill_dir = skills_dir / skill.name
+            skill_md = skill_dir / "SKILL.md"
+            if skill_md.exists() and not overwrite:
+                raise FileExistsError(f"refusing to overwrite: {skill_md}")
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            body = _render_skill_md(skill)
+            skill_md.write_text(body, encoding="utf-8")
+            written.append(skill_md)
+
+        return written
+
+
+def _agent_to_dict(a: OpenCodeAgent) -> dict[str, Any]:
     """Serialize an OpenCodeAgent to its opencode.json form."""
-    d: dict = {
+    d: dict[str, Any] = {
         "model": a.model,
         "prompt": a.system_prompt,
     }
@@ -192,9 +257,9 @@ def _agent_to_dict(a: OpenCodeAgent) -> dict:
     return d
 
 
-def _mcp_to_dict(m: OpenCodeMCP) -> dict:
+def _mcp_to_dict(m: OpenCodeMCP) -> dict[str, Any]:
     """Serialize an OpenCodeMCP to its opencode.json form."""
-    d: dict = {"type": m.transport}
+    d: dict[str, Any] = {"type": m.transport}
     if m.command:
         d["command"] = list(m.command)
     if m.url:
@@ -204,7 +269,7 @@ def _mcp_to_dict(m: OpenCodeMCP) -> dict:
     return d
 
 
-def _hooks_to_list(hooks: tuple[OpenCodeHook, ...]) -> list[dict]:
+def _hooks_to_list(hooks: tuple[OpenCodeHook, ...]) -> list[dict[str, Any]]:
     """Group hooks by event (OpenCode schema: hooks is a flat list of {event, ...}).
 
     Note
@@ -222,3 +287,17 @@ def _hooks_to_list(hooks: tuple[OpenCodeHook, ...]) -> list[dict]:
         }
         for h in hooks
     ]
+
+
+def _json_dumps(data: dict[str, Any] | list[Any]) -> str:
+    """Serialize dict/list as pretty-printed JSON with trailing newline."""
+    import json
+
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+
+
+def _render_skill_md(skill: OpenCodeSkill) -> str:
+    """Render an OpenCodeSkill as a SKILL.md file with frontmatter."""
+    # Quote the description for safety (it may contain colons)
+    desc = skill.description.replace("\\", "\\\\").replace('"', '\\"')
+    return f'---\nname: {skill.name}\ndescription: "{desc}"\n---\n\n{skill.body}\n'

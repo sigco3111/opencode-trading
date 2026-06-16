@@ -1,5 +1,8 @@
-"""Smoke tests for domain models (v0.1.0)."""
+"""Tests for domain models (v0.2.0)."""
 from __future__ import annotations
+
+import json
+from pathlib import Path
 
 from opencode_trading.models import (
     OpenCodeAgent,
@@ -19,7 +22,6 @@ def test_opencode_agent_is_frozen() -> None:
     )
     assert agent.name == "head-manager"
     assert agent.kind == "primary"
-    # Frozen dataclass: assignment must raise
     import dataclasses
 
     try:
@@ -78,8 +80,55 @@ def test_workspace_to_opencode_json_blocks() -> None:
     assert blocks["agent"]["head-manager"]["model"] == "github-copilot/gpt-4o"
 
 
-# ---- helpers (use the private functions from models.py) --------------------
-from opencode_trading.models import _agent_to_dict, _mcp_to_dict  # noqa: E402
+def test_workspace_write_creates_agents_json(tmp_path: Path) -> None:
+    ws = OpenCodeWorkspace(
+        agents=(
+            OpenCodeAgent(
+                name="head-manager",
+                kind="primary",
+                model="m",
+                system_prompt="p",
+            ),
+        ),
+    )
+    written = ws.write(tmp_path)
+    agents_json = tmp_path / "agents.json"
+    assert agents_json in written
+    data = json.loads(agents_json.read_text())
+    assert "head-manager" in data
+
+
+def test_workspace_write_creates_skill_markdown(tmp_path: Path) -> None:
+    ws = OpenCodeWorkspace(
+        skills=(
+            OpenCodeSkill(
+                name="orchestrate-workflow",
+                description="Coordinate workflows",
+                body="# Orchestrate Workflow\n\nBody content.",
+            ),
+        ),
+    )
+    written = ws.write(tmp_path)
+    skill_md = tmp_path / "skills" / "orchestrate-workflow" / "SKILL.md"
+    assert skill_md in written
+    text = skill_md.read_text()
+    assert text.startswith("---")
+    assert "name: orchestrate-workflow" in text
+    assert "Body content." in text
+
+
+def test_workspace_write_refuses_overwrite_by_default(tmp_path: Path) -> None:
+    ws = OpenCodeWorkspace(
+        agents=(OpenCodeAgent(name="x", kind="primary", model="m", system_prompt="p"),),
+    )
+    ws.write(tmp_path)
+    import pytest
+
+    with pytest.raises(FileExistsError):
+        ws.write(tmp_path)
+
+
+from opencode_trading.models import _mcp_to_dict  # noqa: E402
 
 
 def hook_to_dict_helper(hook: OpenCodeHook) -> dict:
@@ -90,3 +139,4 @@ def hook_to_dict_helper(hook: OpenCodeHook) -> dict:
 
 def mcp_to_dict_helper(mcp: OpenCodeMCP) -> dict:
     return _mcp_to_dict(mcp)
+
