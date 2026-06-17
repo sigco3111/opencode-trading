@@ -1,0 +1,15 @@
+opencode-trading is primarily written and maintained by:
+
+    sigco3111 <https://github.com/sigco3111>
+
+This project stands on the work of:
+
+    monarchjuno and contributors — TradingCodex (Apache-2.0)
+    <https://github.com/monarchjuno/tradingcodex>
+
+    code-yeongyu and contributors — oh-my-openagent
+    <https://github.com/code-yeongyu/oh-my-openagent>
+
+A full contributor list is available in the git history:
+
+    git log --format='%aN <%aE>' | sort -u
