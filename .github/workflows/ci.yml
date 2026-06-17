@@ -40,9 +40,11 @@ jobs:
         run: |
           mypy src --strict
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
-          pytest -v --tb=short
+          coverage run -m pytest -q --tb=short
+          coverage report
+          coverage xml -o coverage.xml
 
       - name: Smoke test CLI
         run: |

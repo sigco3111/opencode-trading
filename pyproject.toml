@@ -28,9 +28,10 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8",
-  "ruff",
-  "mypy",
+    "pytest>=8",
+    "ruff",
+    "mypy",
+    "coverage[toml]>=7",
 ]
 tradingcodex = [
   "tradingcodex>=0.2.0",
@@ -64,3 +65,23 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP"]
+
+[tool.coverage.run]
+branch = true
+source = ["src/opencode_trading"]
+omit = [
+    "src/opencode_trading/__main__.py",
+    "src/opencode_trading/_bundled/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 60
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
