@@ -1,7 +1,8 @@
-#+ opencode-trading Architecture (v0.2.0)
+#+ opencode-trading Architecture (v0.4.0)
 
 This document describes how `opencode_trading.convert_workspace()` walks a
-TradingCodex v0.2.0 workspace and emits an OpenCode-compatible bundle.
+TradingCodex v0.2.0 workspace and emits an OpenCode-compatible bundle, plus
+the v0.3.0+ attach path, and the v0.4.0 `verify` and `--with-tcx` features.
 
 ## Pipeline
 
@@ -113,9 +114,94 @@ The MCP `TRADINGCODEX_WORKSPACE_ROOT` env is set to `str(target)` so the
 TradingCodex MCP server treats the parent dir as the workspace root
 (where `.tradingcodex/secrets.md`, `trading/`, etc. would conventionally live).
 
-## Future (v0.4.0+)
+## v0.4.0 verify subcommand (Released)
 
-- `opencode-trading verify <path>` — round-trip integrity check
-- `opencode-trading attach --with-tcx` — also generate the full TCX
-  workspace (`.codex/`, `.tradingcodex/`, `.agents/`) alongside `.opencode/`
-- TCX v0.3.0 snapshot upgrade (currently fixed at v0.2.0)
+Validates an existing OpenCode workspace (`<path>/.opencode/`) and optionally
+round-trips against a TCX source workspace.
+
+```
+opencode-trading verify <path> [--workspace <tcx_src>] [--strict]
+            |
+            v
+verify_workspace(path, source=None) -> VerifyResult
+            |
+            +-- check <path>/.opencode/ exists
+            +-- parse agents.json, mcp.json, hooks.json
+            |     (each must exist + be valid JSON)
+            +-- walk skills/*/SKILL.md
+            |     - frontmatter `name` must match dir name
+            |     - body must not be empty
+            +-- validate every hook event ∈ HookEvent literal
+            +-- if --workspace given:
+            |     run convert_workspace(source) and compare:
+            |     - agent names
+            |     - skill names
+            |     - hook (event, command, env, blocking) signatures
+            v
+    VerifyResult(passed, errors, warnings, summary)
+            |
+            v
+   exit 0  ── passed=True, no errors (warnings OK unless --strict)
+   exit 1  ── passed=False, list errors
+   exit 2  ── usage error (path missing, etc.)
+```
+
+**Contract scenarios** (`tests/test_verify.py`):
+- S1 happy: `verify` on a valid `attach_workspace` output → exit 0, `passed=True`
+- S2 missing file: `agents.json` deleted → exit 1, error names the missing file
+- S3 invalid hook event: junk event injected into `hooks.json` → exit 1, error names the bad entry
+- S4 round-trip: `verify --workspace <tcx_src>` → cross-checks TCX↔OpenCode equivalence
+- S5 frontmatter mismatch: skill dir `review-risk` but `fm.name="totally-different"` → exit 1
+
+## v0.4.0 attach --with-tcx (Released)
+
+When passed to `attach`, the bundled TCX workspace files are also written to
+`<target>/` so the user gets a complete, dual-use workspace (TCX + OpenCode).
+
+```
+opencode-trading attach --target ~/ws --with-tcx [--overwrite] [--dry-run]
+            |
+            v
+attach_workspace(target=~/ws, package_spec="tradingcodex", with_tcx=True)
+            |
+            +-- _build_agents / _build_hooks / _build_mcp_servers / _build_skills
+            |     (same as default attach)
+            +-- _write_tcx_files(target=~/ws, overwrite=...)
+            |     - .codex/agents/*.toml            (from _bundled/agents/)
+            |     - .codex/hooks.json                (from _bundled/hooks.json)
+            |     - .codex/prompts/base_instructions/head-manager.md
+            |     - .tradingcodex/mainagent/head-manager.yaml
+            |     - .tradingcodex/mainagent/subagent-registry.yaml
+            |     - .tradingcodex/config.yaml        (from _bundled/tradingcodex/config.yaml)
+            |     - .tradingcodex/workflows/*.yaml
+            |     - .tradingcodex/subagents/skills/<role>/<skill>/SKILL.md
+            |     - .agents/skills/<skill>/SKILL.md
+            v
+       OpenCodeWorkspace (10 agents, 13 skills, 8+ hooks, 1 MCP) + TCX root
+            |
+            v
+    ws.write(<target>/.opencode)
+    _write_tcx_files(<target>/...)  # raises FileExistsError if existing & no --overwrite
+            |
+            v
+   ~/ws/
+   ├── .opencode/        (OpenCode bundle — same as default attach)
+   ├── .codex/           (TCX Codex-native shim)
+   ├── .tradingcodex/    (TCX config + workflows + subagent skills)
+   └── .agents/          (orchestrator skills)
+```
+
+**Contract scenarios** (`tests/test_with_tcx.py` + `tests/test_cli.py`):
+- S1 happy: writes all four dirs; every file's bytes match the bundled source
+- S2 overwrite: `--overwrite` replaces existing TCX files without prompt
+- S3 no-overwrite: existing TCX files + no `--overwrite` → exit 2 with clear error
+- S4 dry-run: `--dry-run` prints the plan, no FS writes
+
+## Future (v0.5.0+)
+
+- TCX v0.3.0 snapshot upgrade — **DEFERRED**: TradingCodex v0.3.0 has not yet
+  been released on PyPI or GitHub (verified 2026-06-17). When TCX v0.3.0 ships,
+  the bundled snapshot will be re-cut and `_TCX_VERSION` bumped.
+- `attach --with-tcx` is currently a "raw files" copy. Future versions may
+  include TCX-side rendering (e.g. `{{GENERATED_AT}}` placeholder substitution)
+  and bundled TCX Python hooks (`tradingcodex_hook.py`).

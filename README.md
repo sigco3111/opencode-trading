@@ -157,9 +157,10 @@ To verify the conversion without a real TradingCodex installation, use the inclu
 
 | 버전 / Version | 목표 / Goal | 상태 / Status |
 |---|---|---|
-| **v0.1.0** | Phase 0: README/스켈레톤/문서/설계 (다른 PC 작업용) | ✅ 진행 중 / In progress |
+| **v0.1.0** | Phase 0: README/스켈레톤/문서/설계 (다른 PC 작업용) | ✅ Released |
 | **v0.2.0** | 변환기 5종 (agent/hook/command/mcp/workflow) + 30+ 테스트 | ✅ Released |
-| **v0.3.0** | `tcx-opencode attach` CLI — OpenCode용 워크스페이스 생성기 | 📋 예정 / Planned |
+| **v0.3.0** | `opencode-trading attach` CLI — OpenCode용 워크스페이스 생성기 (번들된 TCX v0.2.0 템플릿) | ✅ Released |
+| **v0.4.0** | `verify` 서브커맨드 (라운드트립 무결성 검사) + `attach --with-tcx` 플래그 (`.codex`/`.tradingcodex`/`.agents` 동시 생성) | 📋 진행 중 / In progress |
 | **v1.0.0** | TradingCodex 업스트림 머지 가능 형태로 안정화 | 📋 예정 / Planned |
 
 ---
