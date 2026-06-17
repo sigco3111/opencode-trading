@@ -28,12 +28,18 @@ TradingCodex is a **Codex-only harness** (deeply tied to `.codex/agents/*.toml`,
 ## 설치 / Installation
 
 ```bash
-# v0.3.0 이후 (PyPI 미배포 — GitHub 직접 설치)
-pip install git+https://github.com/sigco3111/opencode-trading.git@v0.3.0
+# v0.4.0 (GitHub 직접 설치 / direct from GitHub)
+pip install git+https://github.com/sigco3111/opencode-trading.git@v0.4.0
 
-# 또는 uv (PEP 668 호환)
-uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.3.0
+# 또는 uv (PEP 668 호환 / PEP 668 compatible)
+uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.4.0
 ```
+
+**Python 3.14 requirement / Python 3.14 요구사항**:
+The bundled `attach` subcommand works on Python 3.11+. The `convert`
+subcommand against a **live** TradingCodex workspace (currently
+`tradingcodex>=0.2.0`) requires Python 3.14 — see the
+[FAQ](#faq) for the bundled-snapshot workaround.
 
 **의존성 / Dependencies**: zero-deps (TradingCodex 본체는 별도 설치)
 
@@ -160,7 +166,7 @@ To verify the conversion without a real TradingCodex installation, use the inclu
 | **v0.1.0** | Phase 0: README/스켈레톤/문서/설계 (다른 PC 작업용) | ✅ Released |
 | **v0.2.0** | 변환기 5종 (agent/hook/command/mcp/workflow) + 30+ 테스트 | ✅ Released |
 | **v0.3.0** | `opencode-trading attach` CLI — OpenCode용 워크스페이스 생성기 (번들된 TCX v0.2.0 템플릿) | ✅ Released |
-| **v0.4.0** | `verify` 서브커맨드 (라운드트립 무결성 검사) + `attach --with-tcx` 플래그 (`.codex`/`.tradingcodex`/`.agents` 동시 생성) | 📋 진행 중 / In progress |
+| **v0.4.0** | `verify` 서브커맨드 (라운드트립 무결성 검사) + `attach --with-tcx` 플래그 (`.codex`/`.tradingcodex`/`.agents` 동시 생성) | ✅ Released |
 | **v1.0.0** | TradingCodex 업스트림 머지 가능 형태로 안정화 | 📋 예정 / Planned |
 
 ---
@@ -216,7 +222,9 @@ opencode-trading/
 
 ## 기여 / Contributing
 
-기여 환영합니다. 새 변환기 추가 시:
+For the full contributor guide, see [CONTRIBUTING.md](CONTRIBUTING.md). See also [SECURITY.md](SECURITY.md) for security disclosure and our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+기여 환영합니다. 전체 가이드는 [CONTRIBUTING.md](CONTRIBUTING.md) 를 참조하세요. 보안 신고는 [SECURITY.md](SECURITY.md), 행동 강령은 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) 를 참조하세요. 새 변환기 추가 시:
 1. `src/opencode_trading/converters/` 에 `<name>.py` 작성
 2. `tests/test_<name>.py` 단위 테스트 (TradingCodex 샘플 워크스페이스 fixture 기반)
 3. `docs/architecture.md` 다이어그램 업데이트
@@ -235,6 +243,36 @@ Contributions welcome. For new converters:
 - **[monarchjuno/tradingcodex](https://github.com/monarchjuno/tradingcodex)** v0.2.0 — 본체 (Apache-2.0)
 - **[oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)** — OpenCode 에이전트 스쿼드 시스템
 - **시그니처 시리즈 / Sigco signature series**: `md-doctor`, `cron-doctor`, `kakao-summary`와 동일 패턴
+
+---
+
+## FAQ
+
+**Q. `convert` and `attach` produce nearly identical `.opencode/` directories — why both?**
+A. `convert` reads a live TradingCodex workspace you already have
+(`tcx attach <dir>` first). `attach` scaffolds a fresh OpenCode workspace
+from the bundled TCX v0.2.0 templates without needing TradingCodex
+installed — useful for OpenCode-only environments and CI.
+
+**Q. `convert` fails with "tradingcodex requires Python >=3.14,<3.15" on my 3.13 system. What now?**
+A. Use `attach` (works on 3.11+). The bundled TCX snapshot gives you
+the same OpenCode workspace without the live TCX install. If you need
+a true round-trip against your own TCX workspace, install Python 3.14
+via pyenv and re-run.
+
+**Q. The OpenCode workspace produced by `convert` and `attach` is byte-identical, right?**
+A. Not always. `convert` reflects the **source** TCX workspace's
+agents/skills/hooks (which may have been hand-edited). `attach` always
+reflects the **bundled** TCX v0.2.0 snapshot. Use
+`opencode-trading verify <path> --workspace <tcx_src>` to detect drift.
+
+**Q. Is this mergeable upstream into monarchjuno/tradingcodex?**
+A. v1.0.0 targets merge-readiness. The adapter is zero-deps,
+Apache-2.0/MIT-friendly, and ships with governance + CI coverage.
+Open an issue on monarchjuno/tradingcodex with a link to v1.0.0.
+
+**Q. How do I report a security issue?**
+A. See [SECURITY.md](SECURITY.md) — do not file a public issue.
 
 ---
 
