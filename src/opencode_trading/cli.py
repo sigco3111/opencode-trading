@@ -280,9 +280,7 @@ def _cmd_attach(args: argparse.Namespace) -> int:
                     shutil.rmtree(d)
 
     try:
-        ws, tcx_root = attach_workspace(
-            target=target, package_spec=package_spec, with_tcx=with_tcx
-        )
+        ws, tcx_root = attach_workspace(target=target, package_spec=package_spec, with_tcx=with_tcx)
     except FileExistsError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

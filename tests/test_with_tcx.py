@@ -31,9 +31,7 @@ def test_attach_workspace_with_tcx_writes_all_three_dirs(tmp_path: Path) -> None
     """
     from opencode_trading.attach import attach_workspace
 
-    ws, tcx_root = attach_workspace(
-        target=tmp_path, package_spec="tradingcodex", with_tcx=True
-    )
+    ws, tcx_root = attach_workspace(target=tmp_path, package_spec="tradingcodex", with_tcx=True)
     assert isinstance(tcx_root, Path)
     assert (tmp_path / ".codex" / "agents").is_dir()
     assert (tmp_path / ".codex" / "hooks.json").is_file()
@@ -52,9 +50,7 @@ def test_attach_with_tcx_bytes_match_bundled(tmp_path: Path) -> None:
     """S1 invariant: every written file's bytes must match the bundled source."""
     from opencode_trading.attach import _BUNDLED_DIR, attach_workspace
 
-    _ws, _ = attach_workspace(
-        target=tmp_path, package_spec="tradingcodex", with_tcx=True
-    )
+    _ws, _ = attach_workspace(target=tmp_path, package_spec="tradingcodex", with_tcx=True)
     pairs = [
         (tmp_path / ".codex" / "hooks.json", _BUNDLED_DIR / "hooks.json"),
         (
@@ -82,9 +78,7 @@ def test_attach_with_tcx_role_skills_copied(tmp_path: Path) -> None:
     """S1 invariant: role-skills and orchestrator skills mirror under .tradingcodex and .agents."""
     from opencode_trading.attach import _BUNDLED_DIR, attach_workspace
 
-    _ws, _ = attach_workspace(
-        target=tmp_path, package_spec="tradingcodex", with_tcx=True
-    )
+    _ws, _ = attach_workspace(target=tmp_path, package_spec="tradingcodex", with_tcx=True)
     # Each role-skill under _BUNDLED_DIR/role-skills/<role>/<skill>/SKILL.md
     # must be present under .tradingcodex/subagents/skills/<role>/<skill>/SKILL.md
     for role_skill in (_BUNDLED_DIR / "role-skills").rglob("SKILL.md"):
@@ -124,9 +118,7 @@ def test_attach_with_tcx_nested_target_path(tmp_path: Path) -> None:
     deep = tmp_path / "a" / "b" / "c" / "d" / "trading-ws"
     assert not deep.exists()
 
-    ws, tcx_root = attach_workspace(
-        target=deep, package_spec="tradingcodex", with_tcx=True
-    )
+    ws, tcx_root = attach_workspace(target=deep, package_spec="tradingcodex", with_tcx=True)
     ws.write(deep / ".opencode", overwrite=True)
 
     assert deep.is_dir()
@@ -142,9 +134,7 @@ def test_attach_with_tcx_long_target_path(tmp_path: Path) -> None:
     long_name = "a" * 200
     target = tmp_path / long_name
 
-    ws, tcx_root = attach_workspace(
-        target=target, package_spec="tradingcodex", with_tcx=True
-    )
+    ws, tcx_root = attach_workspace(target=target, package_spec="tradingcodex", with_tcx=True)
     ws.write(target / ".opencode", overwrite=True)
 
     assert (target / ".codex" / "hooks.json").is_file()
@@ -159,9 +149,7 @@ def test_attach_with_tcx_idempotent_byte_match(tmp_path: Path) -> None:
     from opencode_trading.attach import attach_workspace
 
     target = tmp_path / "ws"
-    ws1, _ = attach_workspace(
-        target=target, package_spec="tradingcodex", with_tcx=True
-    )
+    ws1, _ = attach_workspace(target=target, package_spec="tradingcodex", with_tcx=True)
     ws1.write(target / ".opencode", overwrite=True)
 
     first_hooks = (target / ".codex" / "hooks.json").read_bytes()
@@ -182,9 +170,7 @@ def test_attach_with_tcx_idempotent_byte_match(tmp_path: Path) -> None:
     if (target / ".opencode").exists():
         shutil.rmtree(target / ".opencode")
 
-    ws2, _ = attach_workspace(
-        target=target, package_spec="tradingcodex", with_tcx=True
-    )
+    ws2, _ = attach_workspace(target=target, package_spec="tradingcodex", with_tcx=True)
     ws2.write(target / ".opencode", overwrite=True)
 
     assert (target / ".codex" / "hooks.json").read_bytes() == first_hooks

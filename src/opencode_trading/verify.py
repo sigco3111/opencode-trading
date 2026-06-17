@@ -132,9 +132,7 @@ def verify_workspace(path: Path, *, source: Path | None = None) -> VerifyResult:
     )
 
 
-def _read_json(
-    path: Path, errors: list[str], label: str
-) -> dict[str, Any] | list[Any] | None:
+def _read_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | list[Any] | None:
     """Read a JSON file or record an error. Returns None on failure."""
     if not path.is_file():
         errors.append(f"missing {label}")
@@ -150,9 +148,7 @@ def _read_json(
     return data
 
 
-def _validate_hook_events(
-    hooks: dict[str, Any] | list[Any], errors: list[str]
-) -> None:
+def _validate_hook_events(hooks: dict[str, Any] | list[Any], errors: list[str]) -> None:
     """Record an error for every hook entry whose ``event`` is invalid."""
     entries = hooks if isinstance(hooks, list) else list(hooks.values())
     for entry in entries:
@@ -184,17 +180,12 @@ def _collect_skill_names(opencode_dir: Path, errors: list[str]) -> set[str]:
             errors.append(f"invalid frontmatter in {skill_md}: {exc}")
             continue
         if fm.name != dir_name:
-            errors.append(
-                f"skill frontmatter mismatch: dir {dir_name!r} "
-                f"vs fm.name {fm.name!r}"
-            )
+            errors.append(f"skill frontmatter mismatch: dir {dir_name!r} vs fm.name {fm.name!r}")
         names.add(dir_name)
     return names
 
 
-def _compare_against_source(
-    source: Path, opencode_dir: Path, errors: list[str]
-) -> None:
+def _compare_against_source(source: Path, opencode_dir: Path, errors: list[str]) -> None:
     """Compare on-disk artifacts against ``convert_workspace(source)``."""
     from opencode_trading.converters.codex_to_opencode import convert_workspace
 
@@ -220,9 +211,7 @@ def _compare_against_source(
     for name in sorted(missing_in_actual):
         errors.append(f"skill {name!r} missing from workspace (present in source)")
     for name in sorted(missing_in_expected):
-        errors.append(
-            f"skill {name!r} present in workspace but absent from source"
-        )
+        errors.append(f"skill {name!r} present in workspace but absent from source")
 
     expected_hook_sigs = {_hook_signature(h) for h in tcx_ws.hooks}
     actual_hooks = _read_hooks(opencode_dir, errors)

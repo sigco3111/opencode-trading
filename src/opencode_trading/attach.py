@@ -138,22 +138,30 @@ def _tcx_pairs() -> list[tuple[Path, Path]]:
         for src in sorted((_BUNDLED_DIR / "agents").glob("*.toml"))
     )
     pairs.append((_BUNDLED_DIR / "hooks.json", Path(".codex/hooks.json")))
-    pairs.append((
-        _BUNDLED_DIR / "prompts" / "head-manager.md",
-        Path(".codex/prompts/base_instructions/head-manager.md"),
-    ))
-    pairs.append((
-        _BUNDLED_DIR / "mainagent" / "head-manager.yaml",
-        Path(".tradingcodex/mainagent/head-manager.yaml"),
-    ))
-    pairs.append((
-        _BUNDLED_DIR / "mainagent" / "subagent-registry.yaml",
-        Path(".tradingcodex/mainagent/subagent-registry.yaml"),
-    ))
-    pairs.append((
-        _BUNDLED_DIR / "tradingcodex" / "config.yaml",
-        Path(".tradingcodex/config.yaml"),
-    ))
+    pairs.append(
+        (
+            _BUNDLED_DIR / "prompts" / "head-manager.md",
+            Path(".codex/prompts/base_instructions/head-manager.md"),
+        )
+    )
+    pairs.append(
+        (
+            _BUNDLED_DIR / "mainagent" / "head-manager.yaml",
+            Path(".tradingcodex/mainagent/head-manager.yaml"),
+        )
+    )
+    pairs.append(
+        (
+            _BUNDLED_DIR / "mainagent" / "subagent-registry.yaml",
+            Path(".tradingcodex/mainagent/subagent-registry.yaml"),
+        )
+    )
+    pairs.append(
+        (
+            _BUNDLED_DIR / "tradingcodex" / "config.yaml",
+            Path(".tradingcodex/config.yaml"),
+        )
+    )
     pairs.extend(
         (src, Path(".tradingcodex/workflows") / src.name)
         for src in sorted((_BUNDLED_DIR / "workflows").glob("*.yaml"))

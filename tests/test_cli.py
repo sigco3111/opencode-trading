@@ -77,9 +77,7 @@ def test_cli_convert_writes_files(sample_tcx_workspace: Path, tmp_path: Path) ->
     assert "head-manager" in data
 
 
-def test_cli_convert_out_then_verify_round_trip(
-    sample_tcx_workspace: Path, tmp_path: Path
-) -> None:
+def test_cli_convert_out_then_verify_round_trip(sample_tcx_workspace: Path, tmp_path: Path) -> None:
     """`convert --out <dir>` followed by `verify <dir>` composes cleanly (v1.0.0 fix)."""
     out = tmp_path / "oc-rt"
     convert = _run_cli("convert", "--out", str(out), workspace=sample_tcx_workspace)

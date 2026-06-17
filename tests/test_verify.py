@@ -110,9 +110,7 @@ def test_verify_workspace_s3_invalid_hook_event(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_verify_workspace_s4_round_trip(
-    tmp_path: Path, sample_tcx_workspace: Path
-) -> None:
+def test_verify_workspace_s4_round_trip(tmp_path: Path, sample_tcx_workspace: Path) -> None:
     """S4: --workspace <tcx_src> → round-trip TCX↔OpenCode equivalence.
 
     Uses convert_workspace(source) so the OpenCodeWorkspace is generated
