@@ -1,4 +1,5 @@
 """Tests for the CLI (v0.2.0 + v0.3.0 attach)."""
+
 from __future__ import annotations
 
 import json
@@ -43,7 +44,10 @@ def test_cli_help() -> None:
 def test_cli_convert_dry_run(sample_tcx_workspace: Path) -> None:
     """`--dry-run` prints plan without writing files."""
     result = _run_cli(
-        "convert", "--dry-run", "--out", str(sample_tcx_workspace / "should-not-exist"),
+        "convert",
+        "--dry-run",
+        "--out",
+        str(sample_tcx_workspace / "should-not-exist"),
         workspace=sample_tcx_workspace,
     )
     assert result.returncode == 0, result.stderr
@@ -57,7 +61,9 @@ def test_cli_convert_writes_files(sample_tcx_workspace: Path, tmp_path: Path) ->
     """Real `convert --out` writes agents.json, mcp.json, hooks.json, skills/."""
     out = tmp_path / "opencode-out"
     result = _run_cli(
-        "convert", "--out", str(out),
+        "convert",
+        "--out",
+        str(out),
         workspace=sample_tcx_workspace,
     )
     assert result.returncode == 0, result.stderr
@@ -136,7 +142,8 @@ def test_cli_attach_package_spec(tmp_path: Path) -> None:
     target = tmp_path / "pinned-ws"
     result = _run_cli(
         "attach",
-        "--package-spec", "git+https://example.com/tcx@v1",
+        "--package-spec",
+        "git+https://example.com/tcx@v1",
         target=target,
     )
     assert result.returncode == 0, result.stderr

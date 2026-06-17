@@ -15,6 +15,7 @@ TradingCodex v0.2.0 stores workflows at
 Each workflow becomes an :class:`OpenCodeSkill` whose body tells the
 agent which TradingCodex MCP tools to call and where to write artifacts.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,4 +1,5 @@
 """Unit tests for the minimal YAML parser used by TradingCodex workspace files."""
+
 from __future__ import annotations
 
 from opencode_trading._yaml_min import parse_yaml

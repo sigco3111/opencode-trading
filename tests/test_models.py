@@ -1,4 +1,5 @@
 """Tests for domain models (v0.2.0)."""
+
 from __future__ import annotations
 
 import json
@@ -70,9 +71,7 @@ def test_workspace_to_opencode_json_blocks() -> None:
                 system_prompt="x",
             ),
         ),
-        mcp_servers=(
-            OpenCodeMCP(name="tradingcodex", transport="stdio", command=("uvx",)),
-        ),
+        mcp_servers=(OpenCodeMCP(name="tradingcodex", transport="stdio", command=("uvx",)),),
     )
     blocks = ws.to_opencode_json_blocks()
     assert "head-manager" in blocks["agent"]
@@ -139,4 +138,3 @@ def hook_to_dict_helper(hook: OpenCodeHook) -> dict:
 
 def mcp_to_dict_helper(mcp: OpenCodeMCP) -> dict:
     return _mcp_to_dict(mcp)
-

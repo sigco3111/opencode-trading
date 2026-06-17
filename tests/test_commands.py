@@ -9,6 +9,7 @@ TradingCodex v0.2.0 has two distinct command-shaped artifacts:
 2. Orchestrator skills at ``.agents/skills/<name>/SKILL.md`` — collected
    in directory order and returned as a tuple of :class:`OpenCodeSkill`.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

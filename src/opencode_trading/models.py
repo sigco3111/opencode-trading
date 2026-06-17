@@ -16,6 +16,7 @@ Use the @dataclass(frozen=True) pattern, NOT pydantic, to keep zero-deps.
 If you need pydantic features (validation, JSON schema export), add them
 in a separate `models_pydantic.py` (optional dep) — don't pollute this file.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

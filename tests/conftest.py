@@ -13,6 +13,7 @@ This fixture is the basis for round-trip conversion tests: load it,
 run ``convert_workspace()``, verify all 10 agents, 11+ skills, 8 hooks,
 and 1 MCP server are emitted.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

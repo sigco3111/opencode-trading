@@ -19,6 +19,7 @@ The frontmatter must:
 - Values may contain colons (e.g. URLs) if quoted
 - Empty body is allowed (frontmatter may end with `---` and no body follows)
 """
+
 from __future__ import annotations
 
 import re
@@ -72,8 +73,8 @@ def parse_frontmatter(text: str) -> Frontmatter:
     if not m:
         raise ValueError("missing closing frontmatter '---' delimiter")
 
-    fm_text = text[4:m.start()]
-    body = text[m.end():]
+    fm_text = text[4 : m.start()]
+    body = text[m.end() :]
 
     name = ""
     description = ""
@@ -83,16 +84,16 @@ def parse_frontmatter(text: str) -> Frontmatter:
         line = raw_line.strip()
         if not line:
             continue
-        if ':' not in line:
+        if ":" not in line:
             # skip malformed lines
             continue
-        key, _, rest = line.partition(':')
+        key, _, rest = line.partition(":")
         key = key.strip()
         val = rest.lstrip()
         val = _strip_quotes(val.strip())
-        if key == 'name':
+        if key == "name":
             name = val
-        elif key == 'description':
+        elif key == "description":
             description = val
         else:
             extras[key] = val

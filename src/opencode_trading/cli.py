@@ -19,6 +19,7 @@ the positional value contains spaces or special chars (e.g. workspace paths
 with brackets, parentheses, or "x" between names). The safe pattern: pass
 the workspace as a required ``--workspace`` option, not a positional.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -84,8 +85,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--out",
         type=Path,
         default=None,
-        help="output directory for generated OpenCode artifacts "
-        "(default: <workspace>/.opencode/)",
+        help="output directory for generated OpenCode artifacts (default: <workspace>/.opencode/)",
     )
     convert.add_argument(
         "--dry-run",

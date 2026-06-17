@@ -12,6 +12,7 @@ This file is a thin shim. The actual CLI logic lives in :mod:`opencode_trading.c
 isn't installed (just `cd src && python -m opencode_trading`). Useful for
 verifying the package loads correctly during dev without `pip install -e`.
 """
+
 from __future__ import annotations
 
 import sys

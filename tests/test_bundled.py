@@ -4,6 +4,7 @@ The ``_bundled/`` directory is shipped inside the wheel and accessed at
 runtime via :mod:`importlib.resources`. These tests verify the package
 data is correctly wired (MANIFEST.in + pyproject.toml package-data).
 """
+
 from __future__ import annotations
 
 import json

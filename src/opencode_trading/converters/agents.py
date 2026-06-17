@@ -18,6 +18,7 @@ The registry at ``.tradingcodex/mainagent/subagent-registry.yaml`` maps each
 subagent name to its assigned skills — we use this to populate the
 ``skills`` field of each ``OpenCodeAgent``.
 """
+
 from __future__ import annotations
 
 import tomllib

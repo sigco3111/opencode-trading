@@ -24,6 +24,7 @@ A ``tcx attach``-generated workspace contains:
 - ``.agents/skills/*/SKILL.md``       — orchestrator skills
 - ``.tradingcodex/subagents/skills/<role>/<skill>/SKILL.md`` — role skills
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -91,10 +92,7 @@ def convert_workspace(
 
     # Bundle: head-manager prompt + orchestrator skills + role skills + workflow skills
     all_skills: tuple[OpenCodeSkill, ...] = (
-        (head_manager_skill,)
-        + orchestrator_skills
-        + role_skills
-        + workflow_skills
+        (head_manager_skill,) + orchestrator_skills + role_skills + workflow_skills
     )
 
     return OpenCodeWorkspace(

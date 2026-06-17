@@ -15,6 +15,7 @@ These tests use the shared fixtures from ``tests/conftest.py``:
 - ``sample_tcx_workspace`` — real TradingCodex v0.2.0 fixture (30+ files).
 - ``tmp_tcx_workspace`` — minimal skeleton (no agent TOML, no head-manager.yaml).
 """
+
 from __future__ import annotations
 
 from pathlib import Path

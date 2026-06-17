@@ -33,6 +33,7 @@ Design decisions
    Future TCX versions will require a new bundled snapshot + a v0.4.0
    release.
 """
+
 from __future__ import annotations
 
 import json
@@ -168,54 +169,75 @@ def _build_hooks() -> tuple[OpenCodeHook, ...]:
 def _build_mcp_servers(*, target: Path, package_spec: str) -> tuple[OpenCodeMCP, ...]:
     """Build the TradingCodex MCP server entry with target-substituted env."""
     workspace_root = str(target)
-    return (register_tradingcodex_mcp(
-        package_spec=package_spec,
-        workspace_root=workspace_root,
-    ),)
+    return (
+        register_tradingcodex_mcp(
+            package_spec=package_spec,
+            workspace_root=workspace_root,
+        ),
+    )
 
 
 def _build_skills() -> tuple[OpenCodeSkill, ...]:
-    """Build the head-manager skill + orchestrator skills + role skills + workflow skills."""
+    """Build the head-manager skill + orchestrator skills + role skills + workflow skills.
+
+    Deduplicates by name: if an orchestrator/role skill has the same name as
+    a workflow skill, the orchestrator/role version wins (more specific
+    content). The duplicate is silently skipped to avoid the writer
+    refusing to overwrite on the second ``write_text()`` call.
+    """
     skills: list[OpenCodeSkill] = []
+    seen_names: set[str] = set()
 
-    # 1. Head-manager skill (system prompt)
     head_manager_md = _read_bundled_text("prompts/head-manager.md")
-    skills.append(OpenCodeSkill(
-        name="head-manager",
-        description="TradingCodex head-manager system prompt.",
-        body=head_manager_md,
-    ))
+    skills.append(
+        OpenCodeSkill(
+            name="head-manager",
+            description="TradingCodex head-manager system prompt.",
+            body=head_manager_md,
+        )
+    )
+    seen_names.add("head-manager")
 
-    # 2. Orchestrator skills (6)
     for skill_dir in sorted((_BUNDLED_DIR / "orchestrator").iterdir()):
         skill_md = skill_dir / "SKILL.md"
         if not skill_md.is_file():
             continue
         fm = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
-        skills.append(OpenCodeSkill(
-            name=fm.name,
-            description=fm.description,
-            body=fm.body,
-        ))
+        if fm.name in seen_names:
+            continue
+        skills.append(
+            OpenCodeSkill(
+                name=fm.name,
+                description=fm.description,
+                body=fm.body,
+            )
+        )
+        seen_names.add(fm.name)
 
-    # 3. Role skills (5)
     role_skills_dir = _BUNDLED_DIR / "role-skills"
     for skill_md in sorted(role_skills_dir.rglob("SKILL.md")):
         fm = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
-        skills.append(OpenCodeSkill(
-            name=fm.name,
-            description=fm.description,
-            body=fm.body,
-        ))
+        if fm.name in seen_names:
+            continue
+        skills.append(
+            OpenCodeSkill(
+                name=fm.name,
+                description=fm.description,
+                body=fm.body,
+            )
+        )
+        seen_names.add(fm.name)
 
-    # 4. Workflow skills (1+)
     for yaml_path in sorted((_BUNDLED_DIR / "workflows").glob("*.yaml")):
         wf_data = parse_yaml(yaml_path.read_text(encoding="utf-8"))
         name = str(wf_data.get("name") or yaml_path.stem)
+        if name in seen_names:
+            continue
         triggers = wf_data.get("trigger_examples") or []
         sample = ", ".join(str(t) for t in triggers[:2])
         description = f"TradingCodex workflow: {name} (triggers: {sample})"
         body = _render_skill_body(name, wf_data)
         skills.append(OpenCodeSkill(name=name, description=description, body=body))
+        seen_names.add(name)
 
     return tuple(skills)

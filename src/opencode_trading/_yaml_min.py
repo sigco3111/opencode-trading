@@ -15,6 +15,7 @@ Limitations (intentional): no anchors, tags, flow style, multi-docs, or
 advanced YAML features. The parser raises ValueError with line numbers on
 malformed input.
 """
+
 from __future__ import annotations
 
 import re
@@ -46,9 +47,7 @@ def _parse_scalar(raw: str) -> Any:
     if s == "":
         return None
     # quoted
-    if (s.startswith('"') and s.endswith('"')) or (
-        s.startswith("'") and s.endswith("'")
-    ):
+    if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
         # remove surrounding quotes, keep interior verbatim (minimal handling)
         return s[1:-1]
 

@@ -21,6 +21,7 @@ We map each Codex event+hook entry to an :class:`OpenCodeHook`. The
 ``command`` string is split via :func:`shlex.split` into an argv tuple.
 Matchers, timeouts, and statusMessages are preserved in ``env``.
 """
+
 from __future__ import annotations
 
 import json
@@ -106,7 +107,7 @@ def convert_hooks_dict(
             if not isinstance(entry, dict):
                 continue
             matcher = str(entry.get("matcher", "") or "")
-            for inner in (entry.get("hooks") or []):
+            for inner in entry.get("hooks") or []:
                 if not isinstance(inner, dict) or inner.get("type") != "command":
                     continue
                 cmd = str(inner.get("command", "") or "")

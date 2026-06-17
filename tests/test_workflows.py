@@ -6,6 +6,7 @@ workflow (triggers + outputs) that the converter turns into a single
 :class:`OpenCodeSkill` whose body tells the agent which TradingCodex MCP
 tools to call and where to write artifacts.
 """
+
 from __future__ import annotations
 
 import shutil

@@ -11,6 +11,7 @@ TradingCodex v0.2.0 has two distinct command-shaped artifacts:
    with frontmatter-derived name/description and the markdown body as
    the skill body.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

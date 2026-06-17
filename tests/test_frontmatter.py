@@ -31,7 +31,7 @@ def test_render_roundtrip() -> None:
     text = (
         "---\n"
         "name: review-risk\n"
-        "description: \"Review investment and order risk before drafting or approving an order.\"\n"
+        'description: "Review investment and order risk before drafting or approving an order."\n'
         "---\n\n"
         "# Review Risk\n\nUse through the configured role skill map."
     )

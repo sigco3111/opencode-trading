@@ -12,6 +12,7 @@ per-session. The {PACKAGE_SPEC} and {PROJECT_DIR} templates are kept
 literal — the user's opencode.json consumer is expected to render them
 (or we render at write time in Workspace.write()).
 """
+
 from __future__ import annotations
 
 from opencode_trading.models import OpenCodeMCP

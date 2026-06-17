@@ -24,6 +24,7 @@ Trade-off: YAML parsing
 We hand-roll a minimal YAML reader (``_yaml_min``) that supports the
 specific TCX v0.2.0 schemas. Full PyYAML is not added to keep zero-deps.
 """
+
 from __future__ import annotations
 
 from opencode_trading.converters.agents import convert_agents

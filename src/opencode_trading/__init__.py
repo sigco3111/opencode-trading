@@ -30,6 +30,7 @@ its generated workspace files (TOML/Markdown/YAML) and emit OpenCode JSON.
 This keeps the adapter installable in <1s and independent of TradingCodex
 release cycles.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -65,8 +66,10 @@ def __getattr__(name: str) -> Any:
         return getattr(mod, name)
     if name == "convert_workspace":
         from .converters.codex_to_opencode import convert_workspace
+
         return convert_workspace
     if name == "attach_workspace":
         from .attach import attach_workspace
+
         return attach_workspace
     raise AttributeError(f"module 'opencode_trading' has no attribute {name!r}")

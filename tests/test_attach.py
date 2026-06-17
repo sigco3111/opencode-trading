@@ -4,6 +4,7 @@ The attach CLI builds a fresh OpenCode workspace from the bundled
 TradingCodex v0.2.0 templates (no TCX install required, no FS read of
 an existing TCX workspace).
 """
+
 from __future__ import annotations
 
 import json
@@ -60,9 +61,15 @@ def test_attach_agents_9_subagents_present() -> None:
     agents = _build_agents()
     subagent_names = {a.name for a in agents if a.kind == "subagent"}
     expected = {
-        "fundamental-analyst", "technical-analyst", "news-analyst",
-        "macro-analyst", "instrument-analyst", "valuation-analyst",
-        "portfolio-manager", "risk-manager", "execution-operator",
+        "fundamental-analyst",
+        "technical-analyst",
+        "news-analyst",
+        "macro-analyst",
+        "instrument-analyst",
+        "valuation-analyst",
+        "portfolio-manager",
+        "risk-manager",
+        "execution-operator",
     }
     assert subagent_names == expected
 
@@ -149,9 +156,13 @@ def test_attach_mcp_workspace_root_substituted(tmp_path: Path) -> None:
 
 
 def test_attach_skills_count(tmp_path: Path) -> None:
-    """head-manager + 6 orchestrator + 5 role + 1 workflow = 13 skills."""
+    """head-manager + 6 orchestrator + 5 role + 1 workflow - 1 dedup = 12 skills.
+
+    The orchestrator ``postmortem`` skill and the workflow ``postmortem`` skill
+    share a name; the orchestrator version wins (deduped).
+    """
     skills = _build_skills()
-    assert len(skills) == 13
+    assert len(skills) == 12
 
 
 def test_attach_skill_head_manager_present() -> None:
