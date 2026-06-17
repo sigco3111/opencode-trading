@@ -67,24 +67,56 @@ def convert_hooks(workspace: Path) -> tuple[OpenCodeHook, ...]:
     except json.JSONDecodeError as exc:
         raise ConversionError(f"invalid JSON in {hooks_path}: {exc}") from exc
 
+    return convert_hooks_dict(data, source_label=str(hooks_path))
+
+
+def convert_hooks_dict(
+    data: dict[str, object],
+    *,
+    source_label: str = "<dict>",
+) -> tuple[OpenCodeHook, ...]:
+    """Convert an already-parsed hooks.json dict to OpenCodeHook tuple.
+
+    Public for reuse by :mod:`opencode_trading.attach` which reads the
+    bundled hooks.json via :mod:`importlib.resources` rather than from a
+    TCX workspace on disk.
+
+    Parameters
+    ----------
+    data : dict
+        Parsed ``.codex/hooks.json`` content (must have a top-level
+        ``"hooks"`` key mapping event names to a list of matcher entries).
+    source_label : str
+        Used only in error messages; default is fine for in-memory data.
+
+    Returns
+    -------
+    tuple[OpenCodeHook, ...]
+        One OpenCodeHook per inner hook in the dict.
+    """
+    hooks_section = data.get("hooks", {})
+    if not isinstance(hooks_section, dict):
+        return ()
     result: list[OpenCodeHook] = []
-    for codex_event, entries in data.get("hooks", {}).items():
-        opencode_event = _EVENT_MAP.get(codex_event)
+    for codex_event, entries in hooks_section.items():
+        opencode_event = _EVENT_MAP.get(str(codex_event))
         if opencode_event is None:
             continue
-        for entry in entries:
-            matcher = entry.get("matcher", "")
-            for inner in entry.get("hooks", []):
-                if inner.get("type") != "command":
+        for entry in entries or []:
+            if not isinstance(entry, dict):
+                continue
+            matcher = str(entry.get("matcher", "") or "")
+            for inner in (entry.get("hooks") or []):
+                if not isinstance(inner, dict) or inner.get("type") != "command":
                     continue
-                cmd = inner.get("command", "")
+                cmd = str(inner.get("command", "") or "")
                 env: dict[str, str] = {}
                 if matcher:
                     env["OPENCODE_HOOK_MATCHER"] = matcher
                 if "timeout" in inner:
                     env["OPENCODE_HOOK_TIMEOUT"] = str(inner["timeout"])
                 if "statusMessage" in inner:
-                    env["OPENCODE_HOOK_STATUS_MESSAGE"] = inner["statusMessage"]
+                    env["OPENCODE_HOOK_STATUS_MESSAGE"] = str(inner["statusMessage"])
                 result.append(
                     OpenCodeHook(
                         event=opencode_event,  # type: ignore[arg-type]
