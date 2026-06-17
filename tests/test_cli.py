@@ -1,4 +1,4 @@
-"""Tests for the CLI (v0.2.0)."""
+"""Tests for the CLI (v0.2.0 + v0.3.0 attach)."""
 from __future__ import annotations
 
 import json
@@ -7,10 +7,16 @@ import sys
 from pathlib import Path
 
 
-def _run_cli(*args: str, workspace: Path | None = None) -> subprocess.CompletedProcess[str]:
+def _run_cli(
+    *args: str,
+    workspace: Path | None = None,
+    target: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
     cmd = [sys.executable, "-m", "opencode_trading", *args]
     if workspace is not None:
         cmd.extend(["--workspace", str(workspace)])
+    if target is not None:
+        cmd.extend(["--target", str(target)])
     return subprocess.run(
         cmd,
         capture_output=True,
@@ -31,6 +37,7 @@ def test_cli_help() -> None:
     assert result.returncode == 0
     assert "TradingCodex" in result.stdout
     assert "convert" in result.stdout
+    assert "attach" in result.stdout
 
 
 def test_cli_convert_dry_run(sample_tcx_workspace: Path) -> None:
@@ -89,3 +96,81 @@ def test_cli_convert_non_tcx_workspace(tmp_path: Path) -> None:
     result = _run_cli("convert", workspace=plain)
     assert result.returncode == 2
     assert ".codex" in result.stderr
+
+
+def test_cli_attach_writes_opencode_artifacts(tmp_path: Path) -> None:
+    target = tmp_path / "new-ws"
+    result = _run_cli("attach", target=target)
+    assert result.returncode == 0, result.stderr
+    assert (target / ".opencode" / "agents.json").exists()
+    assert (target / ".opencode" / "mcp.json").exists()
+    assert (target / ".opencode" / "hooks.json").exists()
+    assert (target / ".opencode" / "skills").is_dir()
+    data = json.loads((target / ".opencode" / "agents.json").read_text())
+    assert len(data) == 10
+    assert "head-manager" in data
+
+
+def test_cli_attach_dry_run(tmp_path: Path) -> None:
+    target = tmp_path / "dry-ws"
+    result = _run_cli("attach", "--dry-run", target=target)
+    assert result.returncode == 0, result.stderr
+    assert "dry-run" in result.stdout
+    assert "agents:" in result.stdout
+    assert not target.exists()
+
+
+def test_cli_attach_overwrite_existing_opencode(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    target.mkdir()
+    (target / ".opencode").mkdir()
+    (target / ".opencode" / "stale.txt").write_text("stale")
+
+    result = _run_cli("attach", "--overwrite", target=target)
+    assert result.returncode == 0, result.stderr
+    assert not (target / ".opencode" / "stale.txt").exists()
+    assert (target / ".opencode" / "agents.json").exists()
+
+
+def test_cli_attach_package_spec(tmp_path: Path) -> None:
+    target = tmp_path / "pinned-ws"
+    result = _run_cli(
+        "attach",
+        "--package-spec", "git+https://example.com/tcx@v1",
+        target=target,
+    )
+    assert result.returncode == 0, result.stderr
+    mcp = json.loads((target / ".opencode" / "mcp.json").read_text())
+    args = mcp["tradingcodex"]["command"]
+    assert "git+https://example.com/tcx@v1" in args
+
+
+def test_cli_attach_target_required(tmp_path: Path) -> None:
+    result = _run_cli("attach")
+    assert result.returncode == 2
+
+
+def test_cli_attach_existing_opencode_no_overwrite(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    target.mkdir()
+    (target / ".opencode").mkdir()
+    (target / ".opencode" / "stale.txt").write_text("stale")
+
+    result = _run_cli("attach", target=target)
+    assert result.returncode == 2
+
+
+def test_cli_attach_help_mentions_flags() -> None:
+    result = _run_cli("attach", "--help")
+    assert result.returncode == 0
+    for flag in ("--target", "--package-spec", "--overwrite", "--dry-run"):
+        assert flag in result.stdout, f"missing flag: {flag}"
+
+
+def test_cli_attach_creates_target_dir(tmp_path: Path) -> None:
+    target = tmp_path / "fresh" / "nested"
+    assert not target.exists()
+    result = _run_cli("attach", target=target)
+    assert result.returncode == 0, result.stderr
+    assert target.exists()
+    assert (target / ".opencode" / "agents.json").exists()

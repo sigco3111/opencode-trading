@@ -6,11 +6,11 @@ The CLI is intentionally thin — it parses args, validates the workspace,
 calls the conversion functions in :mod:`opencode_trading.converters`, and
 prints results. No business logic here.
 
-Subcommand structure (planned)
-------------------------------
-- ``opencode-trading convert <workspace> [--to opencode] [--dry-run] [--out <dir>]``
-- ``opencode-trading verify <workspace>``  (v0.3.0+)
-- ``opencode-trading attach <workspace>``  (v0.3.0+)
+Subcommand structure
+--------------------
+- ``opencode-trading convert --workspace <dir> [--to opencode] [--dry-run] [--out <dir>]`` (v0.2.0+)
+- ``opencode-trading attach --target <dir> [--package-spec <pkg>] [--overwrite] [--dry-run]``
+  (v0.3.0+)
 
 Argparse pitfall (from python-oss-bootstrap kakao-summary lesson)
 ----------------------------------------------------------------
@@ -94,6 +94,38 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     convert.set_defaults(handler=_cmd_convert)
 
+    # `attach` subcommand — v0.3.0+ scaffolds a fresh OpenCode workspace
+    # from bundled TradingCodex v0.2.0 templates (no TCX install needed).
+    attach = sub.add_parser(
+        "attach",
+        help="scaffold a fresh OpenCode workspace from bundled TCX templates",
+    )
+    attach.add_argument(
+        "--target",
+        type=Path,
+        required=True,
+        help="target directory for the new OpenCode workspace "
+        "(artifacts written under <target>/.opencode/)",
+    )
+    attach.add_argument(
+        "--package-spec",
+        type=str,
+        default="tradingcodex",
+        help="value for the TradingCodex MCP --from arg "
+        "(default: 'tradingcodex'; use a git+https URL to pin a version)",
+    )
+    attach.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="overwrite existing files in <target>/.opencode/ if they exist",
+    )
+    attach.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the plan without writing any files",
+    )
+    attach.set_defaults(handler=_cmd_attach)
+
     return parser
 
 
@@ -146,8 +178,71 @@ def _cmd_convert(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_attach(args: argparse.Namespace) -> int:
+    """Handler for ``opencode-trading attach``.
+
+    Builds a fresh OpenCode workspace from the bundled TCX v0.2.0 templates
+    and writes it under ``<target>/.opencode/``.
+    """
+    target: Path = args.target
+    package_spec: str = args.package_spec
+    overwrite: bool = args.overwrite
+    dry_run: bool = args.dry_run
+
+    from opencode_trading.attach import attach_workspace
+
+    try:
+        ws = attach_workspace(target=target, package_spec=package_spec)
+    except Exception as exc:
+        print(f"error: failed to build workspace: {exc}", file=sys.stderr)
+        return 2
+
+    opencode_dir = target / ".opencode"
+
+    print(f"opencode-trading {__version__} — attach")
+    print(f"  target:      {target}")
+    print(f"  out dir:     {opencode_dir}")
+    print(f"  package:     {package_spec}")
+    print(f"  agents:      {len(ws.agents)}")
+    print(f"  skills:      {len(ws.skills)}")
+    print(f"  hooks:       {len(ws.hooks)}")
+    print(f"  mcp:         {len(ws.mcp_servers)}")
+
+    if dry_run:
+        print()
+        print("dry-run: no files written.")
+        return 0
+
+    if target.exists() and not overwrite:
+        existing = list(opencode_dir.glob("*")) if opencode_dir.exists() else []
+        if existing:
+            print(
+                f"error: {opencode_dir}/ already has {len(existing)} files. "
+                "Pass --overwrite to replace them.",
+                file=sys.stderr,
+            )
+            return 2
+
+    if overwrite and opencode_dir.exists():
+        import shutil
+
+        shutil.rmtree(opencode_dir)
+
+    try:
+        ws.write(opencode_dir, overwrite=overwrite)
+    except FileExistsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    print()
+    print(f"wrote OpenCode workspace to {opencode_dir}/")
+    print(f"open it with: opencode {target}")
+    return 0
+
+
 _HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "convert": _cmd_convert,
+    "attach": _cmd_attach,
 }
 
 
