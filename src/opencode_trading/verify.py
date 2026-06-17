@@ -227,11 +227,11 @@ def _compare_against_source(
     expected_hook_sigs = {_hook_signature(h) for h in tcx_ws.hooks}
     actual_hooks = _read_hooks(opencode_dir, errors)
     actual_hook_sigs = {_hook_signature(h) for h in actual_hooks}
-    missing_in_actual = expected_hook_sigs - actual_hook_sigs
-    missing_in_expected = actual_hook_sigs - expected_hook_sigs
-    for sig in sorted(missing_in_actual):
+    missing_hooks_in_actual = expected_hook_sigs - actual_hook_sigs
+    missing_hooks_in_expected = actual_hook_sigs - expected_hook_sigs
+    for sig in sorted(missing_hooks_in_actual):
         errors.append(f"hook {sig!r} missing from workspace (present in source)")
-    for sig in sorted(missing_in_expected):
+    for sig in sorted(missing_hooks_in_expected):
         errors.append(f"hook {sig!r} present in workspace but absent from source")
 
 

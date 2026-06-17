@@ -124,7 +124,37 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="print the plan without writing any files",
     )
+    attach.add_argument(
+        "--with-tcx",
+        action="store_true",
+        help="also write bundled TCX workspace files to <target>/.codex, "
+        ".tradingcodex, .agents (alongside .opencode/)",
+    )
     attach.set_defaults(handler=_cmd_attach)
+
+    verify = sub.add_parser(
+        "verify",
+        help="validate an OpenCode workspace at <path>/.opencode/ "
+        "(optionally round-trip against a TCX source)",
+    )
+    verify.add_argument(
+        "path",
+        type=Path,
+        help="workspace root (parent of .opencode/)",
+    )
+    verify.add_argument(
+        "--workspace",
+        dest="tcx_source",
+        type=Path,
+        default=None,
+        help="optional TCX workspace path for round-trip verification",
+    )
+    verify.add_argument(
+        "--strict",
+        action="store_true",
+        help="treat warnings as errors (exit 1 if any warnings)",
+    )
+    verify.set_defaults(handler=_cmd_verify)
 
     return parser
 
@@ -182,51 +212,93 @@ def _cmd_attach(args: argparse.Namespace) -> int:
     """Handler for ``opencode-trading attach``.
 
     Builds a fresh OpenCode workspace from the bundled TCX v0.2.0 templates
-    and writes it under ``<target>/.opencode/``.
+    and writes it under ``<target>/.opencode/``. With ``--with-tcx``, also
+    writes the bundled TCX workspace files (``.codex/``, ``.tradingcodex/``,
+    ``.agents/``) to ``<target>/``.
     """
     target: Path = args.target
     package_spec: str = args.package_spec
     overwrite: bool = args.overwrite
     dry_run: bool = args.dry_run
+    with_tcx: bool = args.with_tcx
 
     from opencode_trading.attach import attach_workspace
 
-    try:
-        ws = attach_workspace(target=target, package_spec=package_spec)
-    except Exception as exc:
-        print(f"error: failed to build workspace: {exc}", file=sys.stderr)
-        return 2
-
     opencode_dir = target / ".opencode"
-
-    print(f"opencode-trading {__version__} — attach")
-    print(f"  target:      {target}")
-    print(f"  out dir:     {opencode_dir}")
-    print(f"  package:     {package_spec}")
-    print(f"  agents:      {len(ws.agents)}")
-    print(f"  skills:      {len(ws.skills)}")
-    print(f"  hooks:       {len(ws.hooks)}")
-    print(f"  mcp:         {len(ws.mcp_servers)}")
+    tcx_dirs = [target / ".codex", target / ".tradingcodex", target / ".agents"]
 
     if dry_run:
+        from opencode_trading.attach import (
+            _build_agents,
+            _build_hooks,
+            _build_mcp_servers,
+            _build_skills,
+        )
+
+        agents = _build_agents()
+        skills = _build_skills()
+        hooks = _build_hooks()
+        mcp_servers = _build_mcp_servers(target=target, package_spec=package_spec)
+        print(f"opencode-trading {__version__} — attach (dry-run)")
+        print(f"  target:    {target}")
+        print(f"  out dir:   {opencode_dir}")
+        print(f"  with-tcx:  {with_tcx}")
+        print(f"  agents:    {len(agents)}")
+        print(f"  skills:    {len(skills)}")
+        print(f"  hooks:     {len(hooks)}")
+        print(f"  mcp:       {len(mcp_servers)}")
+        if with_tcx:
+            print(f"  tcx dirs:  {', '.join(str(d.relative_to(target)) for d in tcx_dirs)}")
         print()
         print("dry-run: no files written.")
         return 0
 
     if target.exists() and not overwrite:
-        existing = list(opencode_dir.glob("*")) if opencode_dir.exists() else []
-        if existing:
-            print(
-                f"error: {opencode_dir}/ already has {len(existing)} files. "
-                "Pass --overwrite to replace them.",
-                file=sys.stderr,
-            )
+        blocked: list[Path] = []
+        if opencode_dir.exists() and any(opencode_dir.iterdir()):
+            blocked.append(opencode_dir)
+        if with_tcx:
+            for d in tcx_dirs:
+                if d.exists() and any(d.iterdir()):
+                    blocked.append(d)
+        if blocked:
+            for d in blocked:
+                print(
+                    f"error: {d}/ already has files. Pass --overwrite to replace them.",
+                    file=sys.stderr,
+                )
             return 2
 
-    if overwrite and opencode_dir.exists():
+    if overwrite:
         import shutil
 
-        shutil.rmtree(opencode_dir)
+        if opencode_dir.exists():
+            shutil.rmtree(opencode_dir)
+        if with_tcx:
+            for d in tcx_dirs:
+                if d.exists():
+                    shutil.rmtree(d)
+
+    try:
+        ws, tcx_root = attach_workspace(
+            target=target, package_spec=package_spec, with_tcx=with_tcx
+        )
+    except FileExistsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"error: failed to build workspace: {exc}", file=sys.stderr)
+        return 2
+
+    print(f"opencode-trading {__version__} — attach")
+    print(f"  target:      {target}")
+    print(f"  out dir:     {opencode_dir}")
+    print(f"  package:     {package_spec}")
+    print(f"  with-tcx:    {with_tcx}")
+    print(f"  agents:      {len(ws.agents)}")
+    print(f"  skills:      {len(ws.skills)}")
+    print(f"  hooks:       {len(ws.hooks)}")
+    print(f"  mcp:         {len(ws.mcp_servers)}")
 
     try:
         ws.write(opencode_dir, overwrite=overwrite)
@@ -236,13 +308,59 @@ def _cmd_attach(args: argparse.Namespace) -> int:
 
     print()
     print(f"wrote OpenCode workspace to {opencode_dir}/")
+    if with_tcx and tcx_root is not None:
+        print(f"wrote TCX workspace files to {tcx_root}/")
     print(f"open it with: opencode {target}")
     return 0
+
+
+def _cmd_verify(args: argparse.Namespace) -> int:
+    """Handler for ``opencode-trading verify``.
+
+    Validates an OpenCode workspace and prints a PASS/FAIL summary.
+    """
+    path: Path = args.path
+    if not path.exists():
+        print(f"error: workspace does not exist: {path}", file=sys.stderr)
+        return 2
+
+    from opencode_trading.verify import verify_workspace
+
+    result = verify_workspace(path, source=args.tcx_source)
+
+    print(f"opencode-trading {__version__} — verify")
+    print(f"  path:     {path}")
+    if args.tcx_source is not None:
+        print(f"  source:   {args.tcx_source}")
+    for key, value in sorted(result.summary.items()):
+        print(f"  {key}: {value}")
+
+    if result.warnings:
+        print()
+        print("warnings:")
+        for w in result.warnings:
+            print(f"  - {w}")
+
+    if result.passed:
+        if args.strict and result.warnings:
+            print()
+            print("FAIL (--strict: warnings treated as errors)")
+            return 1
+        print()
+        print("PASS")
+        return 0
+
+    print()
+    print("FAIL")
+    for err in result.errors:
+        print(f"  - {err}", file=sys.stderr)
+    return 1
 
 
 _HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "convert": _cmd_convert,
     "attach": _cmd_attach,
+    "verify": _cmd_verify,
 }
 
 

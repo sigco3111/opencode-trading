@@ -181,3 +181,104 @@ def test_cli_attach_creates_target_dir(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     assert target.exists()
     assert (target / ".opencode" / "agents.json").exists()
+
+
+def test_cli_help_lists_all_subcommands() -> None:
+    result = _run_cli("--help")
+    assert result.returncode == 0
+    for sub in ("convert", "attach", "verify"):
+        assert sub in result.stdout, f"missing subcommand: {sub}"
+
+
+def test_cli_attach_help_includes_with_tcx() -> None:
+    result = _run_cli("attach", "--help")
+    assert result.returncode == 0
+    assert "--with-tcx" in result.stdout
+
+
+def test_cli_attach_with_tcx_writes_all_dirs(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    result = _run_cli("attach", "--with-tcx", target=target)
+    assert result.returncode == 0, result.stderr
+    assert (target / ".opencode" / "agents.json").exists()
+    assert (target / ".codex" / "agents").is_dir()
+    assert (target / ".codex" / "hooks.json").is_file()
+    assert (target / ".tradingcodex" / "mainagent" / "head-manager.yaml").is_file()
+    assert (target / ".tradingcodex" / "config.yaml").is_file()
+    assert (target / ".agents" / "skills").is_dir()
+
+
+def test_cli_attach_with_tcx_dry_run(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    result = _run_cli("attach", "--with-tcx", "--dry-run", target=target)
+    assert result.returncode == 0
+    assert not (target / ".codex").exists()
+    assert not (target / ".tradingcodex").exists()
+    assert not (target / ".agents").exists()
+    assert not (target / ".opencode").exists()
+
+
+def test_cli_attach_with_tcx_existing_tcx_no_overwrite(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    (target / ".tradingcodex").mkdir(parents=True)
+    (target / ".tradingcodex" / "config.yaml").write_text("stale")
+    result = _run_cli("attach", "--with-tcx", target=target)
+    assert result.returncode == 2
+    assert ".tradingcodex" in result.stderr or "overwrite" in result.stderr.lower()
+
+
+def test_cli_attach_with_tcx_overwrite_replaces(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    (target / ".tradingcodex" / "config.yaml").parent.mkdir(parents=True)
+    (target / ".tradingcodex" / "config.yaml").write_text("stale")
+    result = _run_cli("attach", "--with-tcx", "--overwrite", target=target)
+    assert result.returncode == 0, result.stderr
+    assert "stale" not in (target / ".tradingcodex" / "config.yaml").read_text()
+
+
+def test_cli_verify_happy(tmp_path: Path) -> None:
+    target = tmp_path / "ws"
+    result = _run_cli("attach", target=target)
+    assert result.returncode == 0, result.stderr
+    result = _run_cli("verify", str(target))
+    assert result.returncode == 0, result.stderr
+    assert "PASS" in result.stdout
+
+
+def test_cli_verify_missing_dir(tmp_path: Path) -> None:
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    result = _run_cli("verify", str(empty))
+    assert result.returncode == 1
+    assert "FAIL" in result.stdout
+
+
+def test_cli_verify_nonexistent_path(tmp_path: Path) -> None:
+    result = _run_cli("verify", str(tmp_path / "does-not-exist"))
+    assert result.returncode == 2
+    assert "does not exist" in result.stderr
+
+
+def test_cli_verify_with_workspace_source(sample_tcx_workspace: Path, tmp_path: Path) -> None:
+    """S4: --workspace <tcx_src> round-trip via convert (true equivalence).
+
+    Copies the fixture so convert doesn't pollute the original; convert
+    writes to ``<src>/.opencode/``; verify then checks round-trip with the
+    same src as the --workspace argument.
+    """
+    import shutil
+
+    tcx_copy = tmp_path / "tcx-src"
+    shutil.copytree(sample_tcx_workspace, tcx_copy)
+    convert = _run_cli("convert", workspace=tcx_copy)
+    assert convert.returncode == 0, convert.stderr
+    result = _run_cli("verify", str(tcx_copy), workspace=tcx_copy)
+    assert result.returncode == 0, result.stderr
+    assert "PASS" in result.stdout
+
+
+def test_cli_verify_help_mentions_flags() -> None:
+    result = _run_cli("verify", "--help")
+    assert result.returncode == 0
+    for flag in ("--workspace", "--strict"):
+        assert flag in result.stdout, f"missing flag: {flag}"

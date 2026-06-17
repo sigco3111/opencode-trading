@@ -47,7 +47,7 @@ def test_verify_workspace_s1_happy(tmp_path: Path) -> None:
     from opencode_trading.verify import verify_workspace
 
     target = tmp_path / "ws"
-    ws = attach_workspace(target=target)
+    ws, _ = attach_workspace(target=target)
     ws.write(target / ".opencode", overwrite=True)
 
     result = verify_workspace(target)
@@ -71,7 +71,7 @@ def test_verify_workspace_s2_missing_file(tmp_path: Path) -> None:
     from opencode_trading.verify import verify_workspace
 
     target = tmp_path / "ws"
-    ws = attach_workspace(target=target)
+    ws, _ = attach_workspace(target=target)
     ws.write(target / ".opencode", overwrite=True)
     (target / ".opencode" / "agents.json").unlink()
 
@@ -92,7 +92,7 @@ def test_verify_workspace_s3_invalid_hook_event(tmp_path: Path) -> None:
     from opencode_trading.verify import verify_workspace
 
     target = tmp_path / "ws"
-    ws = attach_workspace(target=target)
+    ws, _ = attach_workspace(target=target)
     ws.write(target / ".opencode", overwrite=True)
     hooks_path = target / ".opencode" / "hooks.json"
     data = json.loads(hooks_path.read_text())
@@ -143,7 +143,7 @@ def test_verify_workspace_s5_frontmatter_mismatch(tmp_path: Path) -> None:
     from opencode_trading.verify import verify_workspace
 
     target = tmp_path / "ws"
-    ws = attach_workspace(target=target)
+    ws, _ = attach_workspace(target=target)
     ws.write(target / ".opencode", overwrite=True)
     skill_dir = target / ".opencode" / "skills" / "review-risk"
     skill_dir.mkdir(parents=True, exist_ok=True)
