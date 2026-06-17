@@ -110,3 +110,86 @@ def test_attach_with_tcx_refuses_to_overwrite_without_flag(tmp_path: Path) -> No
     (tmp_path / ".codex" / "agents" / "fundamental-analyst.toml").write_text("stale")
     with pytest.raises(FileExistsError):
         attach_workspace(target=tmp_path, package_spec="tradingcodex", with_tcx=True)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: nested paths and long target names (v1.0.0 hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_attach_with_tcx_nested_target_path(tmp_path: Path) -> None:
+    """Edge: --target points to a non-existent deeply-nested path → created cleanly."""
+    from opencode_trading.attach import attach_workspace
+
+    deep = tmp_path / "a" / "b" / "c" / "d" / "trading-ws"
+    assert not deep.exists()
+
+    ws, tcx_root = attach_workspace(
+        target=deep, package_spec="tradingcodex", with_tcx=True
+    )
+    ws.write(deep / ".opencode", overwrite=True)
+
+    assert deep.is_dir()
+    assert (deep / ".codex" / "agents").is_dir()
+    assert (deep / ".opencode" / "agents.json").is_file()
+    assert isinstance(tcx_root, Path)
+
+
+def test_attach_with_tcx_long_target_path(tmp_path: Path) -> None:
+    """Edge: --target has a 200-char basename → no path-length regression."""
+    from opencode_trading.attach import attach_workspace
+
+    long_name = "a" * 200
+    target = tmp_path / long_name
+
+    ws, tcx_root = attach_workspace(
+        target=target, package_spec="tradingcodex", with_tcx=True
+    )
+    ws.write(target / ".opencode", overwrite=True)
+
+    assert (target / ".codex" / "hooks.json").is_file()
+    assert (target / ".tradingcodex" / "config.yaml").is_file()
+    assert (target / ".agents" / "skills").is_dir()
+    assert (target / ".opencode" / "agents.json").is_file()
+    assert isinstance(tcx_root, Path)
+
+
+def test_attach_with_tcx_idempotent_byte_match(tmp_path: Path) -> None:
+    """Edge: second run produces byte-identical TCX files (no drift)."""
+    from opencode_trading.attach import attach_workspace
+
+    target = tmp_path / "ws"
+    ws1, _ = attach_workspace(
+        target=target, package_spec="tradingcodex", with_tcx=True
+    )
+    ws1.write(target / ".opencode", overwrite=True)
+
+    first_hooks = (target / ".codex" / "hooks.json").read_bytes()
+    first_config = (target / ".tradingcodex" / "config.yaml").read_bytes()
+    first_registry = (
+        target / ".tradingcodex" / "mainagent" / "subagent-registry.yaml"
+    ).read_bytes()
+    first_agents_json = (target / ".opencode" / "agents.json").read_bytes()
+
+    import shutil
+
+    if (target / ".codex").exists():
+        shutil.rmtree(target / ".codex")
+    if (target / ".tradingcodex").exists():
+        shutil.rmtree(target / ".tradingcodex")
+    if (target / ".agents").exists():
+        shutil.rmtree(target / ".agents")
+    if (target / ".opencode").exists():
+        shutil.rmtree(target / ".opencode")
+
+    ws2, _ = attach_workspace(
+        target=target, package_spec="tradingcodex", with_tcx=True
+    )
+    ws2.write(target / ".opencode", overwrite=True)
+
+    assert (target / ".codex" / "hooks.json").read_bytes() == first_hooks
+    assert (target / ".tradingcodex" / "config.yaml").read_bytes() == first_config
+    assert (
+        target / ".tradingcodex" / "mainagent" / "subagent-registry.yaml"
+    ).read_bytes() == first_registry
+    assert (target / ".opencode" / "agents.json").read_bytes() == first_agents_json

@@ -155,3 +155,76 @@ def test_verify_workspace_s5_frontmatter_mismatch(tmp_path: Path) -> None:
 
     assert result.passed is False
     assert any("review-risk" in e and "totally-different" in e for e in result.errors)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: empty / malformed inputs (v1.0.0 hardening)
+# ---------------------------------------------------------------------------
+
+
+def test_verify_workspace_empty_hooks_list_passes(tmp_path: Path) -> None:
+    """Edge: hooks.json is a valid empty list → still passes (zero hooks)."""
+    from opencode_trading.attach import attach_workspace
+    from opencode_trading.verify import verify_workspace
+
+    target = tmp_path / "ws"
+    ws, _ = attach_workspace(target=target)
+    ws.write(target / ".opencode", overwrite=True)
+    (target / ".opencode" / "hooks.json").write_text("[]")
+
+    result = verify_workspace(target)
+
+    assert result.passed is True
+    assert result.summary.get("hooks", -1) == 0
+    assert result.errors == ()
+
+
+def test_verify_workspace_malformed_hooks_json(tmp_path: Path) -> None:
+    """Edge: hooks.json is invalid JSON → passed=False, error names 'invalid JSON'."""
+    from opencode_trading.attach import attach_workspace
+    from opencode_trading.verify import verify_workspace
+
+    target = tmp_path / "ws"
+    ws, _ = attach_workspace(target=target)
+    ws.write(target / ".opencode", overwrite=True)
+    (target / ".opencode" / "hooks.json").write_text("{not valid json")
+
+    result = verify_workspace(target)
+
+    assert result.passed is False
+    assert any("invalid JSON" in e and "hooks.json" in e for e in result.errors)
+
+
+def test_verify_workspace_malformed_agents_json(tmp_path: Path) -> None:
+    """Edge: agents.json is a JSON scalar (not object/array) → passed=False."""
+    from opencode_trading.attach import attach_workspace
+    from opencode_trading.verify import verify_workspace
+
+    target = tmp_path / "ws"
+    ws, _ = attach_workspace(target=target)
+    ws.write(target / ".opencode", overwrite=True)
+    (target / ".opencode" / "agents.json").write_text("42")
+
+    result = verify_workspace(target)
+
+    assert result.passed is False
+    assert any("agents.json" in e for e in result.errors)
+
+
+def test_verify_workspace_agent_with_empty_skills_passes(tmp_path: Path) -> None:
+    """Edge: agent entry has empty skills list → still passes (degenerate but legal)."""
+    from opencode_trading.attach import attach_workspace
+    from opencode_trading.verify import verify_workspace
+
+    target = tmp_path / "ws"
+    ws, _ = attach_workspace(target=target)
+    ws.write(target / ".opencode", overwrite=True)
+    agents_path = target / ".opencode" / "agents.json"
+    data = json.loads(agents_path.read_text())
+    first_key = next(iter(data))
+    data[first_key]["skills"] = []
+    agents_path.write_text(json.dumps(data))
+
+    result = verify_workspace(target)
+
+    assert result.passed is True, f"unexpected errors: {result.errors}"
