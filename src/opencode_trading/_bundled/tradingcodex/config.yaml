@@ -1,0 +1,25 @@
+name: tradingcodex
+version: "0.2.0"
+
+service:
+  db_mode: central-local
+  default_db: "~/.tradingcodex/state/tradingcodex.sqlite3"
+  workspace_root_is_provenance_only: true
+
+execution:
+  live_enabled: false
+  default_adapter: paper-trading
+  enabled_adapters:
+    - stub-execution
+    - paper-trading
+
+guardrails:
+  guidance_enabled: true
+  enforcement_enabled: true
+
+information_barriers:
+  enabled: true
+
+subagents:
+  autostart_all_on_session_start: false
+  primary_workflow_skill: orchestrate-workflow
