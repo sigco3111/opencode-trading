@@ -28,11 +28,14 @@ TradingCodex is a **Codex-only harness** (deeply tied to `.codex/agents/*.toml`,
 ## 설치 / Installation
 
 ```bash
-# v0.4.0 (GitHub 직접 설치 / direct from GitHub)
-pip install git+https://github.com/sigco3111/opencode-trading.git@v0.4.0
+# v1.0.0 (GitHub 직접 설치 / direct from GitHub)
+pip install git+https://github.com/sigco3111/opencode-trading.git@v1.0.0
 
 # 또는 uv (PEP 668 호환 / PEP 668 compatible)
-uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.4.0
+uv pip install git+https://github.com/sigco3111/opencode-trading.git@v1.0.0
+
+# 이전 LTS / Previous LTS (v0.4.0)
+pip install git+https://github.com/sigco3111/opencode-trading.git@v0.4.0
 ```
 
 **Python 3.14 requirement / Python 3.14 요구사항**:
@@ -50,7 +53,7 @@ subcommand against a **live** TradingCodex workspace (currently
 ### 1단계 — TradingCodex 본체 준비 / Prepare TradingCodex
 
 ```bash
-# TradingCodex 워크스페이스 attach (Codex 환경 한정, OpenCode로 attach는 v0.2.0+)
+# TradingCodex 워크스페이스 attach (Codex 환경 한정, OpenCode로 attach는 v0.3.0+)
 uvx --from tradingcodex tcx attach ~/opencode-trading
 cd ~/opencode-trading && ./tcx doctor
 ```
@@ -154,7 +157,7 @@ To verify the conversion without a real TradingCodex installation, use the inclu
 5. **`converters/mcp.py`** — TradingCodex MCP 서버를 opencode.json에 등록
 6. **`cli.py`** — `convert` 서브 명령 + `--dry-run` 옵션
 7. **테스트** — `tests/test_*.py` (변환 정확성 + round-trip + CLI)
-8. **CI** — `.github/workflows/ci.yml` (Python 3.11/3.12/3.13, ruff, mypy, pytest)
+8. **CI** — `.github/workflows/ci.yml` (Python 3.11/3.12/3.13/3.14, ruff, mypy, pytest, coverage ≥ 60%)
 9. **v0.1.0 → v0.2.0** — `tcx-opencode attach` CLI (실제 워크스페이스 생성기)
 
 ---
@@ -167,7 +170,7 @@ To verify the conversion without a real TradingCodex installation, use the inclu
 | **v0.2.0** | 변환기 5종 (agent/hook/command/mcp/workflow) + 30+ 테스트 | ✅ Released |
 | **v0.3.0** | `opencode-trading attach` CLI — OpenCode용 워크스페이스 생성기 (번들된 TCX v0.2.0 템플릿) | ✅ Released |
 | **v0.4.0** | `verify` 서브커맨드 (라운드트립 무결성 검사) + `attach --with-tcx` 플래그 (`.codex`/`.tradingcodex`/`.agents` 동시 생성) | ✅ Released |
-| **v1.0.0** | TradingCodex 업스트림 머지 가능 형태로 안정화 | 📋 예정 / Planned |
+| **v1.0.0** | 거버넌스 + 커버리지 + 릴리스 CI — TradingCodex 업스트림 머지 가능 형태로 안정화 | ✅ Released |
 
 ---
 
@@ -176,38 +179,59 @@ To verify the conversion without a real TradingCodex installation, use the inclu
 ```
 opencode-trading/
 ├── README.md
+├── CHANGELOG.md                     # 버전별 변경 이력
 ├── LICENSE                          # MIT
+├── CONTRIBUTING.md                  # 기여 가이드 (v1.0.0+)
+├── CODE_OF_CONDUCT.md               # Contributor Covenant 2.1 (v1.0.0+)
+├── SECURITY.md                      # 보안 신고 정책 (v1.0.0+)
+├── AUTHORS                          # 메인테이너 + 업스트림 (v1.0.0+)
 ├── pyproject.toml                   # setuptools, zero-deps
 ├── .gitignore
 ├── src/opencode_trading/
-│   ├── __init__.py                  # 공개 API
+│   ├── __init__.py                  # 공개 API (convert_workspace, attach_workspace, verify_workspace)
 │   ├── __main__.py                  # python -m opencode_trading 진입점
-│   ├── cli.py                       # argparse 기반 convert 서브 명령
-│   ├── models.py                    # OpenCodeAgent, OpenCodeSkill, OpenCodeHook
-│   ├── exceptions.py                # ConversionError, MissingWorkspaceError
+│   ├── cli.py                       # argparse: convert, attach, verify 서브커맨드
+│   ├── models.py                    # OpenCodeAgent, OpenCodeSkill, OpenCodeHook, OpenCodeWorkspace
+│   ├── verify.py                    # v0.4.0+ verify_workspace() + VerifyResult
+│   ├── attach.py                    # v0.3.0+ attach_workspace() (번들된 TCX 스냅샷)
+│   ├── _frontmatter.py              # hand-rolled YAML frontmatter 파서
+│   ├── _yaml_min.py                 # hand-rolled YAML 미니 파서 (zero-deps)
+│   ├── exceptions.py                # ConversionError, MissingWorkspaceError, UnsupportedTradingCodexVersion
+│   ├── _bundled/                    # v0.3.0+ 번들된 TCX v0.2.0 템플릿 (agents, hooks.json, mainagent, orchestrator, prompts, role-skills, workflows, tradingcodex)
 │   └── converters/                  # 5종 변환기
 │       ├── __init__.py
-│       ├── codex_to_opencode.py     # 메인 변환
-│       ├── hooks.py                 # Codex UserPromptSubmit → OpenCode hook
-│       ├── commands.py              # $orchestrate-workflow → OpenCode command
+│       ├── codex_to_opencode.py     # 메인 변환 오케스트레이터
+│       ├── agents.py                # 9 specialist TOML → OpenCodeAgent
+│       ├── hooks.py                 # .codex/hooks.json → OpenCodeHook
+│       ├── commands.py              # $orchestrate-workflow → OpenCode command + skill
 │       ├── mcp.py                   # TradingCodex MCP 서버 등록
 │       └── workflows.py             # workflow yaml → OpenCode workflow
 ├── tests/
-│   ├── conftest.py
+│   ├── conftest.py                  # sample_tcx_workspace, tmp_tcx_workspace, tmp_opencode_workspace 픽스처
 │   ├── fixtures/
-│   │   └── sample-tcx-workspace/    # TradingCodex 워크스페이스 샘플
-│   ├── test_models.py
+│   │   └── sample-tcx-workspace/    # TradingCodex v0.2.0 워크스페이스 30+ 파일 미러
+│   ├── test_models.py               # frozen dataclass + write() 라운드트립
+│   ├── test_attach.py               # attach_workspace() + builder 단위 테스트
+│   ├── test_with_tcx.py             # v0.4.0+ --with-tcx 시나리오 (S1-S4)
+│   ├── test_verify.py               # v0.4.0+ verify_workspace() (S1-S5)
+│   ├── test_bundled.py              # 번들된 TCX 템플릿 로드 검증
 │   ├── test_codex_to_opencode.py
+│   ├── test_agents.py
 │   ├── test_hooks.py
 │   ├── test_commands.py
+│   ├── test_workflows.py
 │   ├── test_mcp.py
-│   └── test_cli.py
+│   ├── test_converters.py
+│   ├── test_cli.py                  # CLI 서브커맨드 end-to-end (subprocess)
+│   ├── test_frontmatter.py
+│   └── test_yaml_min.py
 ├── docs/
-│   ├── architecture.md              # 변환 파이프라인 다이어그램
+│   ├── architecture.md              # 변환 파이프라인 + v0.4.0 verify/--with-tcx 섹션
 │   ├── codex-vs-opencode.md         # 포맷 차이 매트릭스
 │   └── decisions/                   # ADR (Architecture Decision Records)
 └── .github/workflows/
-    └── ci.yml                       # Python 3.11/3.12/3.13 매트릭스
+    ├── ci.yml                       # Python 3.11-3.14 매트릭스 + ruff + mypy + pytest + coverage ≥ 60%
+    └── release.yml                  # v1.0.0+ sdist+wheel 빌드 + PyPI trusted publishing + GitHub Release
 ```
 
 ---
@@ -267,8 +291,10 @@ reflects the **bundled** TCX v0.2.0 snapshot. Use
 `opencode-trading verify <path> --workspace <tcx_src>` to detect drift.
 
 **Q. Is this mergeable upstream into monarchjuno/tradingcodex?**
-A. v1.0.0 targets merge-readiness. The adapter is zero-deps,
-Apache-2.0/MIT-friendly, and ships with governance + CI coverage.
+A. v1.0.0 is the merge-readiness release. The adapter is zero-deps,
+MIT-licensed, and ships with governance (CONTRIBUTING/CODE_OF_CONDUCT/
+SECURITY/AUTHORS), CI coverage (≥ 60%), and an automated release
+workflow (`.github/workflows/release.yml` → PyPI trusted publishing).
 Open an issue on monarchjuno/tradingcodex with a link to v1.0.0.
 
 **Q. How do I report a security issue?**
