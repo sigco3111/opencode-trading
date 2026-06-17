@@ -65,18 +65,57 @@ TradingCodex v0.2.0 workspace
 ## CLI surface
 
 ```
-# Convert to default out (./.opencode)
+# v0.2.0+ — Convert an existing TradingCodex workspace
 opencode-trading convert --workspace <path>
-
-# Convert to custom dir
 opencode-trading convert --workspace <path> --out <dir>
-
-# Preview without writing
 opencode-trading convert --workspace <path> --dry-run
+
+# v0.3.0+ — Scaffold a fresh OpenCode workspace from bundled TCX v0.2.0 templates
+opencode-trading attach --target <path>
+opencode-trading attach --target <path> --package-spec git+https://...
+opencode-trading attach --target <path> --overwrite
+opencode-trading attach --target <path> --dry-run
 ```
 
-## Future (v0.3.0+)
+## v0.3.0 attach path
 
-- `opencode-trading attach <path>` — generate a fresh TradingCodex workspace
-  pre-converted to OpenCode format
+Unlike `convert` which reads an existing TCX workspace, `attach` builds the
+OpenCodeWorkspace in-memory from the bundled TCX v0.2.0 package data:
+
+```
+opencode-trading attach --target ~/my-trading-ws
+            |
+            v
+attach_workspace(target=~/my-trading-ws, package_spec="tradingcodex")
+            |
+            +-- _build_agents()       reads _bundled/agents/*.toml + registry.yaml
+            +-- _build_hooks()        reads _bundled/hooks.json
+            +-- _build_mcp_servers()  register_tradingcodex_mcp(workspace_root=target)
+            +-- _build_skills()       reads _bundled/prompts/head-manager.md
+            |                         + _bundled/orchestrator/*/SKILL.md
+            |                         + _bundled/role-skills/**/SKILL.md
+            |                         + _bundled/workflows/*.yaml
+            v
+       OpenCodeWorkspace (10 agents, 12 skills, 8 hooks, 1 MCP)
+            |
+            v
+   ws.write(<target>/.opencode, overwrite=args.overwrite)
+            |
+            v
+   ~/my-trading-ws/.opencode/
+   ├── agents.json
+   ├── mcp.json
+   ├── hooks.json
+   └── skills/<name>/SKILL.md
+```
+
+The MCP `TRADINGCODEX_WORKSPACE_ROOT` env is set to `str(target)` so the
+TradingCodex MCP server treats the parent dir as the workspace root
+(where `.tradingcodex/secrets.md`, `trading/`, etc. would conventionally live).
+
+## Future (v0.4.0+)
+
 - `opencode-trading verify <path>` — round-trip integrity check
+- `opencode-trading attach --with-tcx` — also generate the full TCX
+  workspace (`.codex/`, `.tradingcodex/`, `.agents/`) alongside `.opencode/`
+- TCX v0.3.0 snapshot upgrade (currently fixed at v0.2.0)

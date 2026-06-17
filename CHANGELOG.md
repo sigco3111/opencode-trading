@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-17
+
+### Added
+- `opencode-trading attach` CLI subcommand — scaffolds a fresh OpenCode
+  workspace from bundled TCX v0.2.0 templates (no TCX install required)
+- `opencode_trading.attach_workspace()` public API — programmatic equivalent
+- Flags: `--target <dir>` (required), `--package-spec <pkg>` (default `tradingcodex`),
+  `--overwrite`, `--dry-run`
+- Bundled package data: 25 TCX v0.2.0 template files under
+  `src/opencode_trading/_bundled/` (9 specialist TOMLs, head-manager YAML
+  + registry, hooks.json, head-manager.md, 6 orchestrator + 5 role skill
+  MD files, 1 workflow yaml)
+- `convert_hooks_dict(data, source_label)` extracted public helper in
+  `converters.hooks` for reuse by the attach module
+- 30 new tests (test_bundled: 18, test_attach: 22, test_cli attach: +8 = 48;
+  plus deduped test count = 30 new effective tests)
+
+### Changed
+- Module docstring in `__init__.py` documents both `convert_workspace` and
+  `attach_workspace` public APIs
+- `_build_skills()` in attach deduplicates by name (orchestrator's
+  `postmortem` wins over workflow `postmortem`)
+
 ## [0.2.0] - 2026-06-17
 
 ### Added

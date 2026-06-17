@@ -28,11 +28,11 @@ TradingCodex is a **Codex-only harness** (deeply tied to `.codex/agents/*.toml`,
 ## 설치 / Installation
 
 ```bash
-# v0.2.0 이후 (PyPI 미배포 — GitHub 직접 설치)
-pip install git+https://github.com/sigco3111/opencode-trading.git@v0.2.0
+# v0.3.0 이후 (PyPI 미배포 — GitHub 직접 설치)
+pip install git+https://github.com/sigco3111/opencode-trading.git@v0.3.0
 
 # 또는 uv (PEP 668 호환)
-uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.2.0
+uv pip install git+https://github.com/sigco3111/opencode-trading.git@v0.3.0
 ```
 
 **의존성 / Dependencies**: zero-deps (TradingCodex 본체는 별도 설치)
@@ -52,15 +52,23 @@ cd ~/opencode-trading && ./tcx doctor
 ### 2단계 — OpenCode 변환 실행 / Run OpenCode conversion
 
 ```bash
-opencode-trading convert ~/opencode-trading --to opencode
-# → .opencode/agents/*.md, .opencode/skills/*, opencode.json 블록 생성
+# (a) Convert an existing TradingCodex workspace to OpenCode:
+opencode-trading convert --workspace ~/opencode-trading
+# → <workspace>/.opencode/{agents.json, mcp.json, hooks.json, skills/}
+
+# (b) Or scaffold a fresh OpenCode workspace from bundled TCX v0.2.0 templates
+#     (no TCX install required — uses opencode-trading's bundled data):
+opencode-trading attach --target ~/my-trading-ws
+# → ~/my-trading-ws/.opencode/{agents.json, mcp.json, hooks.json, skills/}
 ```
 
 ### 3단계 — OpenCode에서 사용 / Use from OpenCode
 
 ```bash
 # OpenCode 시작
-opencode
+opencode ~/my-trading-ws   # for (b) attach path
+# 또는
+opencode ~/opencode-trading  # for (a) convert path
 
 # oh-my-openagent sisyphus가 TradingCodex MCP 도구 호출
 > "@tradingcodex create_research_artifact for Apple — Q1 2026"
