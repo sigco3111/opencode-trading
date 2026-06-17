@@ -169,7 +169,7 @@ def _cmd_convert(args: argparse.Namespace) -> int:
         print(f"error: workspace is not a directory: {workspace}", file=sys.stderr)
         return 2
 
-    out_dir = args.out or (workspace / ".opencode")
+    out_dir = (args.out or workspace) / ".opencode"
 
     from opencode_trading import convert_workspace
     from opencode_trading.exceptions import MissingWorkspaceError

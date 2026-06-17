@@ -56,7 +56,7 @@ jobs:
           python -m opencode_trading convert \
             --workspace tests/fixtures/sample-tcx-workspace \
             --out /tmp/oc-ci-out
-          test -f /tmp/oc-ci-out/agents.json
-          test -f /tmp/oc-ci-out/mcp.json
-          test -f /tmp/oc-ci-out/hooks.json
-          test -d /tmp/oc-ci-out/skills
+          test -f /tmp/oc-ci-out/.opencode/agents.json
+          test -f /tmp/oc-ci-out/.opencode/mcp.json
+          test -f /tmp/oc-ci-out/.opencode/hooks.json
+          test -d /tmp/oc-ci-out/.opencode/skills

@@ -18,19 +18,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release workflow (`.github/workflows/release.yml`) — sdist + wheel
   build, PyPI trusted publishing (OIDC), GitHub Release on `v*` tags
 - 7 new edge-case tests (verify + attach --with-tcx)
-- `## FAQ` section in README (5 Q/A pairs covering convert vs attach,
+- `## FAQ` section in README (6 Q/A pairs covering convert vs attach,
   Python 3.14 requirement, byte-identical output, upstream-merge
-  readiness, security disclosure)
+  readiness, security disclosure, convert/verify path composition)
 - v0.4.0 retroactively tagged at `9211212` (the v0.4.0 release commit)
 
 ### Changed
-- README: install block updated to `@v0.4.0`, roadmap marks v0.4.0
+- `convert --out <dir>` now writes OpenCode artifacts under
+  `<dir>/.opencode/` (previously: directly under `<dir>`). This aligns
+  the `convert` output layout with `attach` and lets `convert --out
+  <dir>` compose cleanly with `verify <dir>` — both commands agree
+  on `<dir>/.opencode/` as the artifact location. When `--out` is
+  omitted, behavior is unchanged: `convert` writes to
+  `<workspace>/.opencode/`.
+- README: install block updated to `@v1.0.0`, roadmap marks v1.0.0
   as Released, contributing section links to `CONTRIBUTING.md` /
   `SECURITY.md` / `CODE_OF_CONDUCT.md`
+- CI smoke test: convert path assertions updated to `<out>/.opencode/...`
+
+### Fixed
+- `verify <dir>` would FAIL after `convert --out <dir>` because the
+  two commands used different artifact paths. Now both use
+  `<dir>/.opencode/`, so the natural pairing `convert --out <dir> &&
+  verify <dir>` works without manual path manipulation.
 
 ### Notes
-- This is the upstream-merge hardening release. No public API changes
-  since v0.4.0.
+- This is the upstream-merge hardening release. The only public API
+  change is the `convert --out` path layout fix (no signature changes).
 - Coverage baseline of 63% reflects subprocess-based CLI testing in
   test_cli.py (coverage does not track child processes). The 60%
   threshold gives headroom; tightening to 80% is a v1.1.0 task.

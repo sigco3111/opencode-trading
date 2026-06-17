@@ -290,6 +290,14 @@ agents/skills/hooks (which may have been hand-edited). `attach` always
 reflects the **bundled** TCX v0.2.0 snapshot. Use
 `opencode-trading verify <path> --workspace <tcx_src>` to detect drift.
 
+**Q. `convert --out <dir>` + `verify <dir>` composes cleanly, right?**
+A. Yes. `convert --out <dir>` writes the OpenCode artifacts under
+`<dir>/.opencode/` (the same layout `attach` uses), and `verify <dir>`
+inspects that path. So the natural pairing `convert --out foo && verify
+foo` works without manual path manipulation. Same for the `--out`
+omitted default: `convert` writes to `<workspace>/.opencode/`, and
+`verify <workspace>` reads from there.
+
 **Q. Is this mergeable upstream into monarchjuno/tradingcodex?**
 A. v1.0.0 is the merge-readiness release. The adapter is zero-deps,
 MIT-licensed, and ships with governance (CONTRIBUTING/CODE_OF_CONDUCT/

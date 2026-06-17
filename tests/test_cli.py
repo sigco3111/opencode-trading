@@ -58,7 +58,7 @@ def test_cli_convert_dry_run(sample_tcx_workspace: Path) -> None:
 
 
 def test_cli_convert_writes_files(sample_tcx_workspace: Path, tmp_path: Path) -> None:
-    """Real `convert --out` writes agents.json, mcp.json, hooks.json, skills/."""
+    """Real `convert --out` writes agents.json, mcp.json, hooks.json under <out>/.opencode/."""
     out = tmp_path / "opencode-out"
     result = _run_cli(
         "convert",
@@ -67,14 +67,26 @@ def test_cli_convert_writes_files(sample_tcx_workspace: Path, tmp_path: Path) ->
         workspace=sample_tcx_workspace,
     )
     assert result.returncode == 0, result.stderr
-    assert (out / "agents.json").exists()
-    assert (out / "mcp.json").exists()
-    assert (out / "hooks.json").exists()
-    assert (out / "skills").is_dir()
-    # agents.json is valid JSON with the 10 agents
-    data = json.loads((out / "agents.json").read_text())
+    opencode_dir = out / ".opencode"
+    assert (opencode_dir / "agents.json").exists()
+    assert (opencode_dir / "mcp.json").exists()
+    assert (opencode_dir / "hooks.json").exists()
+    assert (opencode_dir / "skills").is_dir()
+    data = json.loads((opencode_dir / "agents.json").read_text())
     assert len(data) == 10
     assert "head-manager" in data
+
+
+def test_cli_convert_out_then_verify_round_trip(
+    sample_tcx_workspace: Path, tmp_path: Path
+) -> None:
+    """`convert --out <dir>` followed by `verify <dir>` composes cleanly (v1.0.0 fix)."""
+    out = tmp_path / "oc-rt"
+    convert = _run_cli("convert", "--out", str(out), workspace=sample_tcx_workspace)
+    assert convert.returncode == 0, convert.stderr
+    verify = _run_cli("verify", str(out))
+    assert verify.returncode == 0, verify.stderr
+    assert "PASS" in verify.stdout
 
 
 def test_cli_convert_default_out(sample_tcx_workspace: Path) -> None:
