@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import tomllib
 from importlib.resources import files
 from pathlib import Path
@@ -65,7 +66,12 @@ _TCX_VERSION = "0.2.0"
 _DEFAULT_MODEL = "github-copilot/gpt-4o"
 
 
-def attach_workspace(*, target: Path, package_spec: str = "tradingcodex") -> OpenCodeWorkspace:
+def attach_workspace(
+    *,
+    target: Path,
+    package_spec: str = "tradingcodex",
+    with_tcx: bool = False,
+) -> tuple[OpenCodeWorkspace, Path | None]:
     """Build a fresh OpenCode workspace bundle from bundled TCX v0.2.0 templates.
 
     Parameters
@@ -77,27 +83,103 @@ def attach_workspace(*, target: Path, package_spec: str = "tradingcodex") -> Ope
     package_spec : str
         Value for the ``--from`` arg of the TradingCodex MCP ``uvx`` command
         (default ``"tradingcodex"``). Use a git+https URL for pinned versions.
+    with_tcx : bool
+        If True, also write the bundled TCX v0.2.0 workspace files
+        (``.codex/``, ``.tradingcodex/``, ``.agents/``) to ``<target>/`` so
+        the user gets a complete, dual-use workspace. Default False.
 
     Returns
     -------
-    OpenCodeWorkspace
-        Complete bundle (10 agents, 13 skills, 8+ hooks, 1 MCP server).
+    tuple[OpenCodeWorkspace, Path | None]
+        The OpenCodeWorkspace bundle and the TCX root path (== target if
+        with_tcx=True, else None). The OpenCode artifacts are written by
+        the caller via ``OpenCodeWorkspace.write()``; TCX files are written
+        eagerly here via :func:`_write_tcx_files` so failures surface
+        immediately.
     """
     agents = _build_agents()
     hooks = _build_hooks()
     mcp_servers = _build_mcp_servers(target=target, package_spec=package_spec)
     skills = _build_skills()
-    return OpenCodeWorkspace(
+    ws = OpenCodeWorkspace(
         agents=agents,
         skills=skills,
         hooks=hooks,
         mcp_servers=mcp_servers,
     )
+    tcx_root: Path | None = None
+    if with_tcx:
+        tcx_root = _write_tcx_files(target=target, overwrite=False)
+    return (ws, tcx_root)
 
 
 def _read_bundled_text(rel: str) -> str:
     """Read text content from a bundled file."""
     return (_BUNDLED / rel).read_text(encoding="utf-8")
+
+
+def _copy_bundled_file(src: Path, dest: Path, *, overwrite: bool) -> None:
+    if dest.exists() and not overwrite:
+        raise FileExistsError(f"refusing to overwrite: {dest}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dest)
+
+
+def _tcx_pairs() -> list[tuple[Path, Path]]:
+    """Return the (bundled_source, target_relative_dest) layout for the TCX files.
+
+    The destination is interpreted as a path relative to the ``target`` directory
+    the caller passes to :func:`_write_tcx_files`. Glob-style expansions
+    (e.g. ``_BUNDLED_DIR/agents/*.toml``) are materialized as one entry per match.
+    """
+    pairs: list[tuple[Path, Path]] = []
+    pairs.extend(
+        (src, Path(".codex/agents") / src.name)
+        for src in sorted((_BUNDLED_DIR / "agents").glob("*.toml"))
+    )
+    pairs.append((_BUNDLED_DIR / "hooks.json", Path(".codex/hooks.json")))
+    pairs.append((
+        _BUNDLED_DIR / "prompts" / "head-manager.md",
+        Path(".codex/prompts/base_instructions/head-manager.md"),
+    ))
+    pairs.append((
+        _BUNDLED_DIR / "mainagent" / "head-manager.yaml",
+        Path(".tradingcodex/mainagent/head-manager.yaml"),
+    ))
+    pairs.append((
+        _BUNDLED_DIR / "mainagent" / "subagent-registry.yaml",
+        Path(".tradingcodex/mainagent/subagent-registry.yaml"),
+    ))
+    pairs.append((
+        _BUNDLED_DIR / "tradingcodex" / "config.yaml",
+        Path(".tradingcodex/config.yaml"),
+    ))
+    pairs.extend(
+        (src, Path(".tradingcodex/workflows") / src.name)
+        for src in sorted((_BUNDLED_DIR / "workflows").glob("*.yaml"))
+    )
+    role_skills_root = _BUNDLED_DIR / "role-skills"
+    pairs.extend(
+        (src, Path(".tradingcodex/subagents/skills") / src.relative_to(role_skills_root))
+        for src in sorted(role_skills_root.rglob("SKILL.md"))
+    )
+    pairs.extend(
+        (src, Path(".agents/skills") / src.relative_to(_BUNDLED_DIR / "orchestrator"))
+        for src in sorted((_BUNDLED_DIR / "orchestrator").rglob("SKILL.md"))
+    )
+    return pairs
+
+
+def _write_tcx_files(*, target: Path, overwrite: bool) -> Path:
+    """Write the bundled TCX workspace files to ``<target>/``.
+
+    See :func:`_tcx_pairs` for the layout. Returns the TCX root (== target).
+    Raises :class:`FileExistsError` on any pre-existing dest file when
+    ``overwrite`` is False.
+    """
+    for src, dest_rel in _tcx_pairs():
+        _copy_bundled_file(src, target / dest_rel, overwrite=overwrite)
+    return target
 
 
 def _build_agents() -> tuple[OpenCodeAgent, ...]:

@@ -28,7 +28,7 @@ from opencode_trading.models import OpenCodeWorkspace
 
 def test_attach_workspace_returns_10_agents(tmp_path: Path) -> None:
     """The full bundle has 1 primary (head-manager) + 9 subagents = 10 agents."""
-    ws = attach_workspace(target=tmp_path, package_spec="tradingcodex")
+    ws, _ = attach_workspace(target=tmp_path, package_spec="tradingcodex")
     assert isinstance(ws, OpenCodeWorkspace)
     assert len(ws.agents) == 10
 
@@ -201,7 +201,7 @@ def test_attach_skill_workflow_postmortem_present() -> None:
 
 def test_attach_workspace_then_write_round_trip(tmp_path: Path) -> None:
     """attach_workspace() produces a workspace that write() renders correctly."""
-    ws = attach_workspace(target=tmp_path, package_spec="tradingcodex")
+    ws, _ = attach_workspace(target=tmp_path, package_spec="tradingcodex")
     ws.write(tmp_path / ".opencode", overwrite=True)
     assert (tmp_path / ".opencode" / "agents.json").exists()
     assert (tmp_path / ".opencode" / "mcp.json").exists()
