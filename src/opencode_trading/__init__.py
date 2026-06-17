@@ -35,15 +35,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "OpenCodeAgent",
     "OpenCodeSkill",
     "OpenCodeHook",
     "OpenCodeWorkspace",
+    "VerifyResult",
     "convert_workspace",
     "attach_workspace",
+    "verify_workspace",
 ]
 
 if TYPE_CHECKING:
@@ -55,6 +57,7 @@ if TYPE_CHECKING:
         OpenCodeSkill,
         OpenCodeWorkspace,
     )
+    from opencode_trading.verify import VerifyResult, verify_workspace
 
 
 def __getattr__(name: str) -> Any:
@@ -72,4 +75,9 @@ def __getattr__(name: str) -> Any:
         from .attach import attach_workspace
 
         return attach_workspace
+    if name in ("verify_workspace", "VerifyResult"):
+        import importlib
+
+        mod = importlib.import_module(".verify", __name__)
+        return getattr(mod, name)
     raise AttributeError(f"module 'opencode_trading' has no attribute {name!r}")

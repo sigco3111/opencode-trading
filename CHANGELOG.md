@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-17
+
+### Added
+- `opencode-trading verify <path>` CLI subcommand — validates an OpenCode
+  workspace and (optionally) round-trips against a TCX source
+- `opencode_trading.verify_workspace(path, *, source=None)` public API
+  returns a `VerifyResult` frozen dataclass (passed / errors / warnings / summary)
+- `attach --with-tcx` flag — also writes bundled TCX workspace files
+  (`.codex/`, `.tradingcodex/`, `.agents/`) to `<target>/` for a dual-use workspace
+- `attach_workspace()` signature change: returns `tuple[OpenCodeWorkspace, Path | None]`
+  (the second element is the TCX root path when `with_tcx=True`, else `None`)
+- Bundled `_bundled/tradingcodex/config.yaml` — synthesized minimal config
+  for `--with-tcx` byte-match invariant
+- `verify` flags: `--workspace <tcx_src>` (round-trip), `--strict` (warnings as errors)
+- 22 new tests: 6 in `test_verify.py`, 5 in `test_with_tcx.py`, 11 in `test_cli.py`
+  (102 → 124 tests total)
+
+### Changed
+- README roadmap: v0.3.0 marked Released, v0.4.0 added as In progress
+- `docs/architecture.md` header bumped to v0.4.0; new sections for
+  `verify` and `--with-tcx` with ASCII diagrams + contract scenarios
+- `attach_workspace()` is now a 3-kwarg function (backward-incompatible
+  return type — callers must unpack the tuple)
+
+### Fixed
+- `verify.py` mypy strict errors: renamed `missing_in_actual/expected`
+  variables per loop to avoid set-type aliasing
+- `attach.py` line-length ruff error in `_tcx_pairs()` body (extracted
+  `_BUNDLED_DIR / "role-skills"` to local variable)
+
+### Notes
+- `verify_workspace(..., source=...)` round-trip compares **names + signatures**
+  only (not full text), so bundled-template drift between attach vs convert
+  is detected as a `FAIL` rather than masked.
+- TCX v0.3.0 snapshot upgrade remains **deferred** — TradingCodex v0.3.0
+  has not been released on PyPI or GitHub (verified 2026-06-17).
+
 ## [0.3.0] - 2026-06-17
 
 ### Added
