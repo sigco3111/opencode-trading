@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-06-17
+
+### Added
+- `CONTRIBUTING.md` — bug reports, feature requests, PR workflow
+- `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1
+- `SECURITY.md` — private vulnerability disclosure policy
+- `AUTHORS` — maintainer + upstream acknowledgements
+- Coverage reporting in CI (`coverage[toml]>=7`, threshold 60% with
+  show_missing + exclude_lines; baseline 63% — raise to 80 in v1.1.0
+  once direct-call CLI tests land)
+- Release workflow (`.github/workflows/release.yml`) — sdist + wheel
+  build, PyPI trusted publishing (OIDC), GitHub Release on `v*` tags
+- 7 new edge-case tests (verify + attach --with-tcx)
+- `## FAQ` section in README (5 Q/A pairs covering convert vs attach,
+  Python 3.14 requirement, byte-identical output, upstream-merge
+  readiness, security disclosure)
+- v0.4.0 retroactively tagged at `9211212` (the v0.4.0 release commit)
+
+### Changed
+- README: install block updated to `@v0.4.0`, roadmap marks v0.4.0
+  as Released, contributing section links to `CONTRIBUTING.md` /
+  `SECURITY.md` / `CODE_OF_CONDUCT.md`
+
+### Notes
+- This is the upstream-merge hardening release. No public API changes
+  since v0.4.0.
+- Coverage baseline of 63% reflects subprocess-based CLI testing in
+  test_cli.py (coverage does not track child processes). The 60%
+  threshold gives headroom; tightening to 80% is a v1.1.0 task.
+- Real-world TCX install (tradingcodex v0.2.0) requires Python 3.14.
+  The bundled `attach` path works on 3.11+; only `convert` against a
+  live TCX workspace needs 3.14. This is documented in the README FAQ.
+- Maintainer follow-up before `git push origin v0.4.0 v1.0.0`:
+  - Register the project on PyPI (https://pypi.org/project/opencode-trading/)
+  - Add a Trusted Publisher on PyPI pointing at this repo +
+    `.github/workflows/release.yml` (OIDC, no API token needed)
+  - Without the Trusted Publisher, the `publish` job will fail with
+    `403 Invalid or non-existent authentication information` — this
+    is expected and does not block the tag push.
+
 ## [0.4.0] - 2026-06-17
 
 ### Added
